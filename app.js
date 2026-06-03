@@ -3,11 +3,12 @@ const buttons = {
     select: document.getElementById('btn-select'),
     addNode: document.getElementById('btn-add-node'),
     addEdge: document.getElementById('btn-add-edge'),
-    rename: document.getElementById('btn-rename'),
     delete: document.getElementById('btn-delete'),
     clear: document.getElementById('btn-clear'),
     nodeSize: document.getElementById('slider-node-size'),
-    edgeLength: document.getElementById('slider-edge-length')
+    edgeLength: document.getElementById('slider-edge-length'),
+    directed: document.getElementById('check-directed'),
+    nodeNameInput: document.getElementById('input-node-name')
 };
 function setActiveButton(activeId) {
     Object.entries(buttons).forEach(([id, btn]) => {
@@ -28,17 +29,6 @@ buttons.addEdge.addEventListener('click', () => {
     graph.setMode('addEdge');
     setActiveButton('addEdge');
 });
-buttons.rename.addEventListener('click', () => {
-    if (graph.selectedElement && graph.selectedElement.type === 'node') {
-        const node = graph.selectedElement.data;
-        const newLabel = prompt('Enter new label:', node.label);
-        if (newLabel !== null) {
-            graph.updateNodeLabel(node.id, newLabel);
-        }
-    } else {
-        alert('Please select a node to rename.');
-    }
-});
 buttons.delete.addEventListener('click', () => {
     graph.deleteSelected();
 });
@@ -53,11 +43,28 @@ buttons.nodeSize.addEventListener('input', (e) => {
 buttons.edgeLength.addEventListener('input', (e) => {
     graph.setPhysicsProperty('edgeLength', e.target.value);
 });
+buttons.directed.addEventListener('change', (e) => {
+    graph.directedEdges = e.target.checked;
+});
+buttons.nodeNameInput.addEventListener('input', (e) => {
+    const val = e.target.value;
+    graph.nextNodeName = val;
+    if (graph.selectedElement && graph.selectedElement.type === 'node') {
+        graph.updateNodeLabel(graph.selectedElement.data.id, val);
+    }
+});
+graph.onSelectionChange = (selection) => {
+    if (selection && selection.type === 'node') {
+        buttons.nodeNameInput.value = selection.data.label;
+    } else {
+        buttons.nodeNameInput.value = graph.nextNodeName;
+    }
+};
 window.addEventListener('keydown', (e) => {
+    if (document.activeElement.tagName === 'INPUT') return;
     if (e.key === 's' || e.key === 'S') buttons.select.click();
     if (e.key === 'n' || e.key === 'N') buttons.addNode.click();
     if (e.key === 'e' || e.key === 'E') buttons.addEdge.click();
-    if (e.key === 'r' || e.key === 'R') buttons.rename.click();
     if (e.key === 'Delete' || e.key === 'Backspace') graph.deleteSelected();
 });
 const demoNodes = [

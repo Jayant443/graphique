@@ -76,7 +76,7 @@ body, html {
     color: #718096;
 }
 
-.toolbar-control input {
+.toolbar-control input[type="range"] {
     width: 80%;
     cursor: pointer;
 }

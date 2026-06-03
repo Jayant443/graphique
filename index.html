@@ -21,10 +21,11 @@
                 <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M16.01 11H4v2h12.01v3L20 12l-3.99-4v3z"/></svg>
                 <span>Edge</span>
             </button>
-            <button id="btn-rename" title="Rename Selected (R)">
-                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                <span>Rename</span>
-            </button>
+            <div class="separator"></div>
+            <div class="toolbar-control">
+                <label>Node Name</label>
+                <input type="text" id="input-node-name" placeholder="New Node" style="width: 120px; padding: 6px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px;">
+            </div>
             <div class="separator"></div>
             <div class="toolbar-control">
                 <label>Node Size</label>
@@ -32,7 +33,11 @@
             </div>
             <div class="toolbar-control">
                 <label>Edge Length</label>
-                <input type="range" id="slider-edge-length" min="50" max="300" value="100">
+                <input type="range" id="slider-edge-length" min="50" max="300" value="150">
+            </div>
+            <div class="toolbar-control">
+                <label>Directed</label>
+                <input type="checkbox" id="check-directed" checked style="width: 20px; height: 20px;">
             </div>
             <div class="separator"></div>
             <button id="btn-delete" class="danger" title="Delete Selected (Del)">

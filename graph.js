@@ -9,6 +9,8 @@ class Graph {
         this.mode = 'select';
         this.selectedElement = null;
         this.edgeSourceNode = null;
+        this.directedEdges = true;
+        this.nextNodeName = "";
         this.transform = { x: 0, y: 0, k: 1 };
         this.repulsion = 400;
         this.attraction = 0.01;
@@ -17,6 +19,7 @@ class Graph {
         this.damping = 0.7;
         this.isSleeping = false;
         this.energyThreshold = 0.01;
+        this.onSelectionChange = null;
         this.initInteractions();
         this.animate();
         this.updateModeUI();
@@ -142,22 +145,13 @@ class Graph {
         let draggedNode = null;
         let isPanning = false;
         let startPoint = { x: 0, y: 0 };
-        this.svg.addEventListener('dblclick', (e) => {
-            const target = e.target;
-            if (target.classList.contains('node')) {
-                const node = this.nodes.get(target.dataset.id);
-                const newLabel = prompt('Enter new label:', node.label);
-                if (newLabel !== null) {
-                    this.updateNodeLabel(node.id, newLabel);
-                }
-            }
-        });
         this.svg.addEventListener('pointerdown', (e) => {
             const target = e.target;
             const pt = this.getRelativePoint(e.clientX, e.clientY);
             if (this.mode === 'addNode') {
                 const id = Date.now().toString();
-                this.addNode(id, `Node ${id.slice(-3)}`, pt.x, pt.y);
+                const name = this.nextNodeName || `Node ${id.slice(-3)}`;
+                this.addNode(id, name, pt.x, pt.y);
                 return;
             }
             if (target.classList.contains('node')) {
@@ -167,7 +161,7 @@ class Graph {
                         this.edgeSourceNode = node;
                         this.selectNode(node);
                     } else {
-                        this.addEdge(this.edgeSourceNode.id, node.id, true);
+                        this.addEdge(this.edgeSourceNode.id, node.id, this.directedEdges);
                         this.edgeSourceNode = null;
                         this.deselectAll();
                     }
@@ -228,16 +222,19 @@ class Graph {
         this.deselectAll();
         node.circle.classList.add('selected');
         this.selectedElement = { type: 'node', data: node };
+        if (this.onSelectionChange) this.onSelectionChange(this.selectedElement);
     }
     selectEdge(edge) {
         this.deselectAll();
         edge.element.classList.add('selected');
         this.selectedElement = { type: 'edge', data: edge };
+        if (this.onSelectionChange) this.onSelectionChange(this.selectedElement);
     }
     deselectAll() {
         this.nodes.forEach(n => n.circle.classList.remove('selected'));
         this.edges.forEach(e => e.element.classList.remove('selected'));
         this.selectedElement = null;
+        if (this.onSelectionChange) this.onSelectionChange(null);
     }
     deleteSelected() {
         if (!this.selectedElement) return;
@@ -248,6 +245,7 @@ class Graph {
             this.removeEdge(edge.source.id, edge.target.id);
         }
         this.selectedElement = null;
+        if (this.onSelectionChange) this.onSelectionChange(null);
         this.wake();
     }
     getRelativePoint(clientX, clientY) {
