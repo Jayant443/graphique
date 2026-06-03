@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightweight Graph Visualization</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <svg id="graph-container">
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                refX="18" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#999" />
+                </marker>
+            </defs>
+            <g id="viewport">
+                <g id="edges-layer"></g>
+                <g id="nodes-layer"></g>
+            </g>
+        </svg>
+    </div>
+    <script src="graph.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
