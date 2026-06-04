@@ -66,13 +66,39 @@ body, html {
 }
 .adj-list-item {
     font-size: 13px;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
+    padding: 8px;
+    border-radius: 8px;
+    transition: background 0.2s;
+    cursor: text;
+}
+.adj-list-item:hover {
+    background: #f1f5f9;
+}
+.adj-list-header {
     display: flex;
     gap: 8px;
+    align-items: baseline;
+    flex-wrap: wrap;
 }
 .adj-list-node {
     font-weight: 700;
     color: var(--primary-color);
+    min-width: 40px;
+}
+.adj-list-neighbors {
+    color: #4a5568;
+    word-break: break-all;
+    flex: 1;
+    min-width: 100px;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+.adj-list-item:focus-within .adj-list-neighbors {
+    background: white;
+    box-shadow: inset 0 0 0 1px var(--primary-color);
+    outline: none;
+    color: var(--text-color);
 }
 .adj-matrix {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;

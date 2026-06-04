@@ -48,7 +48,6 @@ buttons.edgeLength.addEventListener('input', (e) => {
     buttons.edgeLengthVal.textContent = e.target.value;
 });
 
-// Side Panel UI Elements
 const panelElements = {
     adjList: document.getElementById('adj-list-container'),
     adjMatrix: document.getElementById('adj-matrix-table')
@@ -56,21 +55,20 @@ const panelElements = {
 
 graph.onGraphUpdate = (data) => {
     const { nodes, adjList } = data;
-
-    // Update Adjacency List
     let listHtml = '';
     adjList.forEach((neighbors, nodeId) => {
         const node = nodes.find(n => n.id === nodeId);
         const neighborLabels = neighbors.map(id => nodes.find(n => n.id === id).label);
         listHtml += `
-            <div class="adj-list-item">
-                <span class="adj-list-node">${node.label}:</span>
-                <span>${neighborLabels.join(', ') || '∅'}</span>
+            <div class="adj-list-item" data-source-id="${node.id}">
+                <div class="adj-list-header">
+                    <span class="adj-list-node">${node.label}:</span>
+                    <span class="adj-list-neighbors" contenteditable="true" spellcheck="false">${neighborLabels.join(', ') || ' '}</span>
+                </div>
             </div>`;
     });
     panelElements.adjList.innerHTML = listHtml || 'No nodes';
 
-    // Update Adjacency Matrix
     if (nodes.length > 0) {
         let matrixHtml = '<tr><th></th>' + nodes.map(n => `<th>${n.label[0]}</th>`).join('') + '</tr>';
         nodes.forEach(rowNode => {
@@ -87,7 +85,45 @@ graph.onGraphUpdate = (data) => {
     }
 };
 
-// Trigger initial update
+panelElements.adjList.addEventListener('focusout', (e) => {
+    if (e.target.classList.contains('adj-list-neighbors')) {
+        graph.notifyUpdate();
+    }
+});
+
+panelElements.adjList.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        if (e.target.classList.contains('adj-list-neighbors')) {
+            const item = e.target.closest('.adj-list-item');
+            const sourceId = item.dataset.sourceId;
+            const text = e.target.textContent.trim();
+            const labels = text.split(',').map(l => l.trim()).filter(l => l.length > 0);
+            const nodesArr = Array.from(graph.nodes.values());
+            graph.edges = graph.edges.filter(edge => {
+                if (edge.source.id === sourceId) {
+                    edge.group.remove();
+                    return false;
+                }
+                return true;
+            });
+            labels.forEach(label => {
+                const targetNode = nodesArr.find(n => n.label === label);
+                if (targetNode) {
+                    graph.addEdge(sourceId, targetNode.id, graph.directedEdges);
+                }
+            });
+
+            graph.notifyUpdate();
+            graph.wake();
+            e.target.blur();
+        }
+    } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.target.blur();
+    }
+});
+
 graph.notifyUpdate();
 
 buttons.directed.addEventListener('change', (e) => {
