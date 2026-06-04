@@ -438,6 +438,21 @@ class Graph {
         }
     }
 
+    updateEdgeDirectedness(edge, isDirected) {
+        this.saveState();
+        edge.isDirected = isDirected;
+        if (edge.element) {
+            edge.element.classList.toggle('directed', isDirected);
+            if (isDirected) {
+                edge.element.setAttribute('marker-end', 'url(#arrowhead)');
+            } else {
+                edge.element.removeAttribute('marker-end');
+            }
+        }
+        this.notifyUpdate();
+        this.wake();
+    }
+
     initInteractions() {
         let draggedNode = null;
         let isPanning = false;
@@ -769,7 +784,7 @@ class Graph {
                     previous.set(neighbor.id, currentId);
 
                     neighborNode.element.querySelector('.node').classList.add('processing');
-                    
+
                     if (onStep) onStep({ message: `Relaxing edge to ${neighborNode.label}: new distance ${alt}` });
                     await new Promise(r => setTimeout(r, 400));
                 }

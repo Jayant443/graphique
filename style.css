@@ -117,63 +117,6 @@ select:focus-visible,
     margin-bottom: 30px;
 }
 
-.brand-mark {
-    width: 38px;
-    height: 38px;
-    position: relative;
-    flex: 0 0 auto;
-    border-radius: 12px;
-    background: linear-gradient(145deg, #6667df, #4f50c8);
-    box-shadow: 0 7px 16px rgba(91, 91, 214, 0.25);
-}
-
-.brand-mark span {
-    width: 7px;
-    height: 7px;
-    position: absolute;
-    z-index: 1;
-    border: 2px solid white;
-    border-radius: 50%;
-}
-
-.brand-mark span:nth-child(1) {
-    left: 8px;
-    top: 10px;
-}
-
-.brand-mark span:nth-child(2) {
-    right: 8px;
-    top: 8px;
-}
-
-.brand-mark span:nth-child(3) {
-    left: 15px;
-    bottom: 8px;
-}
-
-.brand-mark::before,
-.brand-mark::after {
-    content: "";
-    height: 2px;
-    position: absolute;
-    background: rgba(255, 255, 255, 0.8);
-    transform-origin: left center;
-}
-
-.brand-mark::before {
-    width: 15px;
-    left: 12px;
-    top: 13px;
-    transform: rotate(-8deg);
-}
-
-.brand-mark::after {
-    width: 14px;
-    left: 11px;
-    top: 16px;
-    transform: rotate(54deg);
-}
-
 .panel-section-header h2,
 .panel-section-header h3 {
     margin: 0;
@@ -347,7 +290,7 @@ select:focus-visible,
     border-collapse: separate;
     border-spacing: 3px;
     font-family: "SFMono-Regular", Consolas, monospace;
-    font-size: 10px;
+    font-size: 12px;
 }
 
 .adj-matrix td,
@@ -541,16 +484,32 @@ select:focus-visible,
 .node-name-control,
 .directed-control {
     display: none !important;
+    width: 170px;
+    justify-content: center;
 }
 
 .mode-addNode .node-name-control,
-.mode-select .node-name-control,
-.mode-addEdge .directed-control {
+.mode-select .node-name-control {
+    display: flex !important;
+}
+
+.mode-select.selection-edge .node-name-control {
+    display: none !important;
+}
+
+.mode-addEdge .directed-control,
+.mode-select.selection-edge .directed-control {
     display: flex !important;
 }
 
 #toolbar .separator.node-name-control,
 #toolbar .separator.directed-control {
+    display: none !important;
+}
+
+.mode-addNode #toolbar .separator.node-name-control,
+.mode-select #toolbar .separator.node-name-control,
+.mode-addEdge #toolbar .separator.node-name-control {
     display: block !important;
 }
 

@@ -36,6 +36,9 @@ function setActiveButton(activeId) {
             btn.classList.toggle('active', id === activeId);
         }
     });
+
+    document.body.classList.remove('mode-select', 'mode-addNode', 'mode-addEdge');
+    document.body.classList.add(`mode-${activeId}`);
 }
 
 buttons.select.addEventListener('click', () => {
@@ -166,7 +169,7 @@ buttons.download.addEventListener('click', () => {
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
     const img = new Image();
-    
+
     img.onload = () => {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, width + infoWidth, height);
@@ -181,7 +184,7 @@ buttons.download.addEventListener('click', () => {
         ctx.fillStyle = '#1c2440';
         ctx.font = 'bold 16px sans-serif';
         let y = 40;
-        
+
         ctx.fillText('Graph Details', width + padding, y);
         y += 30;
 
@@ -192,7 +195,7 @@ buttons.download.addEventListener('click', () => {
         y += 20;
         ctx.font = '11px monospace';
         ctx.fillStyle = '#525b73';
-        
+
         data.adjList.forEach((neighbors, nodeId) => {
             const node = data.nodes.find(n => n.id === nodeId);
             const neighborLabels = neighbors.map(nb => {
@@ -202,7 +205,7 @@ buttons.download.addEventListener('click', () => {
             const text = `${node.label}: ${neighborLabels.join(', ') || '-'}`;
             const words = text.split(' ');
             let line = '';
-            for(let n = 0; words.length > 0 && n < words.length; n++) {
+            for (let n = 0; words.length > 0 && n < words.length; n++) {
                 let testLine = line + words[n] + ' ';
                 let metrics = ctx.measureText(testLine);
                 if (metrics.width > infoWidth - (padding * 2) && n > 0) {
@@ -250,7 +253,7 @@ buttons.download.addEventListener('click', () => {
             ctx.font = 'bold 13px sans-serif';
             ctx.fillText(buttons.vizAlgoName.textContent, width + padding, y);
             y += 20;
-            
+
             ctx.fillStyle = '#525b73';
             ctx.font = '11px sans-serif';
             const orderNodes = Array.from(buttons.vizOrder.querySelectorAll('.viz-node')).map(el => el.textContent);
@@ -260,7 +263,7 @@ buttons.download.addEventListener('click', () => {
                 let pathText = orderNodes.join(' → ');
                 const words = pathText.split(' ');
                 let line = '';
-                for(let n = 0; n < words.length; n++) {
+                for (let n = 0; n < words.length; n++) {
                     let testLine = line + words[n] + ' ';
                     if (ctx.measureText(testLine).width > infoWidth - (padding * 2)) {
                         ctx.fillText(line, width + padding, y);
@@ -308,7 +311,7 @@ graph.onGraphUpdate = (data) => {
         badge.className = 'status-badge';
         header.appendChild(badge);
     }
-    badge.textContent = isTree ? 'Tree Detected' : 'General Graph';
+    badge.textContent = isTree ? 'tree' : 'General Graph';
     badge.className = `status-badge ${isTree ? 'badge-tree' : 'badge-graph'}`;
 
     let listHtml = '';
@@ -367,7 +370,7 @@ panelElements.adjMatrix.addEventListener('focusout', (e) => {
         if (val === '0' || isNaN(weight)) {
             graph.removeEdge(sourceId, targetId);
         } else {
-            let edge = graph.edges.find(e => 
+            let edge = graph.edges.find(e =>
                 (e.source.id === sourceId && e.target.id === targetId) ||
                 (!graph.directedEdges && e.source.id === targetId && e.target.id === sourceId)
             );
@@ -398,7 +401,7 @@ panelElements.adjList.addEventListener('keydown', (e) => {
             const sourceId = item.dataset.sourceId;
             const text = e.target.textContent.trim();
             const labels = text.split(',').map(l => l.trim()).filter(l => l.length > 0);
-            
+
             graph.batchUpdate(() => {
                 const isDirected = graph.directedEdges;
                 graph.edges = graph.edges.filter(edge => {
@@ -438,6 +441,9 @@ graph.notifyUpdate();
 
 buttons.directed.addEventListener('change', (e) => {
     graph.directedEdges = e.target.checked;
+    if (graph.selectedElement && graph.selectedElement.type === 'edge') {
+        graph.updateEdgeDirectedness(graph.selectedElement.data, e.target.checked);
+    }
 });
 buttons.nodeNameInput.addEventListener('input', (e) => {
     const val = e.target.value;
@@ -484,12 +490,12 @@ buttons.algoSelect.addEventListener('change', () => {
 
 buttons.runAlgo.addEventListener('click', async () => {
     if (isAlgoRunning) return;
-    
+
     const algo = buttons.algoSelect.value;
-    
+
     if (algo === 'shortest-path') {
         if (!shortestPathSource || !shortestPathTarget) return;
-        
+
         isAlgoRunning = true;
         buttons.runAlgo.style.display = 'none';
         buttons.stopAlgo.style.display = 'block';
@@ -518,21 +524,21 @@ buttons.runAlgo.addEventListener('click', async () => {
     }
 
     if (!graph.selectedElement || graph.selectedElement.type !== 'node') return;
-    
+
     isAlgoRunning = true;
     buttons.runAlgo.style.display = 'none';
     buttons.stopAlgo.style.display = 'block';
     buttons.vizPanel.classList.add('active');
-    
+
     const startNode = graph.selectedElement.data;
-    
+
     const updateViz = (state) => {
-        buttons.vizQueue.innerHTML = state.queue && state.queue.length > 0 
+        buttons.vizQueue.innerHTML = state.queue && state.queue.length > 0
             ? state.queue.map(label => `<span class="viz-node">${label}</span>`).join('')
             : (state.stack && state.stack.length > 0
                 ? state.stack.map(label => `<span class="viz-node">${label}</span>`).join('')
                 : `<div class="empty-state">${algo === 'bfs' ? 'Queue' : 'Stack'} is empty</div>`);
-        
+
         buttons.vizOrder.innerHTML = state.order.length > 0
             ? state.order.map((label, i) => `<span class="viz-node ${label === state.currentNode ? 'current' : ''}">${label}</span>`).join('')
             : '<div class="empty-state">No nodes visited</div>';
@@ -543,7 +549,7 @@ buttons.runAlgo.addEventListener('click', async () => {
     } else if (algo === 'dfs') {
         await graph.runDFS(startNode.id, updateViz);
     }
-    
+
     if (isAlgoRunning) {
         isAlgoRunning = false;
         buttons.runAlgo.style.display = 'block';
@@ -556,7 +562,7 @@ buttons.stopAlgo.addEventListener('click', () => {
     graph.stopAlgorithm();
     buttons.runAlgo.style.display = 'block';
     buttons.stopAlgo.style.display = 'none';
-    
+
     if (buttons.algoSelect.value === 'shortest-path') {
         shortestPathSource = null;
         shortestPathTarget = null;
@@ -570,6 +576,7 @@ buttons.stopAlgo.addEventListener('click', () => {
 
 graph.onSelectionChange = (selection) => {
     const algo = buttons.algoSelect.value;
+    document.body.classList.remove('selection-node', 'selection-edge');
 
     if (algo === 'shortest-path' && selection && selection.type === 'node') {
         if (!shortestPathSource) {
@@ -586,8 +593,14 @@ graph.onSelectionChange = (selection) => {
     }
 
     if (selection && selection.type === 'node') {
+        document.body.classList.add('selection-node');
         buttons.nodeNameInput.value = selection.data.label;
         if (buttons.algoSelect.value !== 'none' && buttons.algoSelect.value !== 'shortest-path') buttons.runAlgo.disabled = false;
+    } else if (selection && selection.type === 'edge') {
+        document.body.classList.add('selection-edge');
+        buttons.directed.checked = selection.data.isDirected;
+        buttons.nodeNameInput.value = graph.nextNodeName;
+        if (buttons.algoSelect.value !== 'shortest-path') buttons.runAlgo.disabled = true;
     } else {
         buttons.nodeNameInput.value = graph.nextNodeName;
         if (buttons.algoSelect.value !== 'shortest-path') buttons.runAlgo.disabled = true;
@@ -612,6 +625,8 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
+setActiveButton('select');
+
 const svgWidth = 1000;
 const svgHeight = 600;
 const centerX = svgWidth / 2;
@@ -623,10 +638,10 @@ const demoNodes = [
     { id: '1', label: 'Root', x: centerX, y: startY },
     { id: '2', label: 'A', x: centerX - horizontalGap, y: startY + levelHeight },
     { id: '3', label: 'B', x: centerX + horizontalGap, y: startY + levelHeight },
-    { id: '4', label: 'C', x: centerX - horizontalGap - horizontalGap/2, y: startY + 2 * levelHeight },
-    { id: '5', label: 'D', x: centerX - horizontalGap + horizontalGap/2, y: startY + 2 * levelHeight },
-    { id: '6', label: 'E', x: centerX + horizontalGap - horizontalGap/2, y: startY + 2 * levelHeight },
-    { id: '7', label: 'F', x: centerX + horizontalGap + horizontalGap/2, y: startY + 2 * levelHeight }
+    { id: '4', label: 'C', x: centerX - horizontalGap - horizontalGap / 2, y: startY + 2 * levelHeight },
+    { id: '5', label: 'D', x: centerX - horizontalGap + horizontalGap / 2, y: startY + 2 * levelHeight },
+    { id: '6', label: 'E', x: centerX + horizontalGap - horizontalGap / 2, y: startY + 2 * levelHeight },
+    { id: '7', label: 'F', x: centerX + horizontalGap + horizontalGap / 2, y: startY + 2 * levelHeight }
 ];
 
 demoNodes.forEach(n => graph.addNode(n.id, n.label, n.x, n.y));
