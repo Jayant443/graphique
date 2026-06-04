@@ -376,8 +376,10 @@ select:focus-visible,
 }
 
 .matrix-card {
-    max-height: 280px;
-    overflow: auto !important;
+    width: 100%;
+    max-width: calc(var(--panel-width) - 40px);
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
 }
 
 .status-badge {

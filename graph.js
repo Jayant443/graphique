@@ -25,6 +25,7 @@ class Graph {
         this.isRestoring = false;
         this.isWeighted = false;
         this.algoController = null;
+        this.nodeCounter = 1;
         this.initInteractions();
         this.animate();
         this.updateModeUI();
@@ -456,7 +457,7 @@ class Graph {
             const pt = this.getRelativePoint(e.clientX, e.clientY);
             if (this.mode === 'addNode') {
                 const id = Date.now().toString();
-                const name = this.nextNodeName || `Node ${id.slice(-3)}`;
+                const name = this.nextNodeName || `${this.nodeCounter++}`;
                 this.addNode(id, name, pt.x, pt.y);
                 return;
             }
@@ -706,6 +707,7 @@ class Graph {
         this.edges.forEach(edge => edge.group.remove());
         this.nodes.clear();
         this.edges = [];
+        this.nodeCounter = 1;
         this.selectedElement = null;
         this.wake();
         this.notifyUpdate();

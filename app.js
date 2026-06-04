@@ -45,6 +45,8 @@ buttons.select.addEventListener('click', () => {
 buttons.addNode.addEventListener('click', () => {
     graph.setMode('addNode');
     setActiveButton('addNode');
+    buttons.nodeNameInput.value = '';
+    graph.nextNodeName = '';
 });
 buttons.addEdge.addEventListener('click', () => {
     graph.setMode('addEdge');
