@@ -25,7 +25,9 @@ const buttons = {
     stopAlgo: document.getElementById('btn-stop-algo'),
     vizPanel: document.getElementById('viz-panel'),
     vizQueue: document.getElementById('viz-queue'),
-    vizOrder: document.getElementById('viz-order')
+    vizOrder: document.getElementById('viz-order'),
+    vizAlgoName: document.getElementById('viz-algo-name'),
+    vizStructureLabel: document.getElementById('viz-structure-label')
 };
 
 function setActiveButton(activeId) {
@@ -340,18 +342,68 @@ buttons.graphType.addEventListener('change', (e) => {
 });
 
 let isAlgoRunning = false;
+let shortestPathSource = null;
+let shortestPathTarget = null;
 
 buttons.algoSelect.addEventListener('change', () => {
     const val = buttons.algoSelect.value;
-    buttons.runAlgo.disabled = (val === 'none' || !graph.selectedElement || graph.selectedElement.type !== 'node');
-    if (val === 'none') {
-        buttons.vizPanel.classList.remove('active');
-        graph.clearHighlights();
+    shortestPathSource = null;
+    shortestPathTarget = null;
+    
+    if (val === 'shortest-path') {
+        buttons.runAlgo.disabled = true;
+        buttons.vizAlgoName.textContent = 'Shortest Path';
+        buttons.vizStructureLabel.textContent = 'Status';
+        buttons.vizQueue.innerHTML = '<div class="empty-state">Select Source Node</div>';
+        buttons.vizOrder.innerHTML = '<div class="empty-state">No path computed</div>';
+    } else {
+        buttons.runAlgo.disabled = (val === 'none' || !graph.selectedElement || graph.selectedElement.type !== 'node');
+        if (val === 'none') {
+            buttons.vizPanel.classList.remove('active');
+            graph.clearHighlights();
+        } else {
+            buttons.vizAlgoName.textContent = val === 'bfs' ? 'BFS State' : 'DFS State';
+            buttons.vizStructureLabel.textContent = val === 'bfs' ? 'Queue' : 'Recursion Stack';
+        }
     }
 });
 
 buttons.runAlgo.addEventListener('click', async () => {
-    if (isAlgoRunning || !graph.selectedElement || graph.selectedElement.type !== 'node') return;
+    if (isAlgoRunning) return;
+    
+    const algo = buttons.algoSelect.value;
+    
+    if (algo === 'shortest-path') {
+        if (!shortestPathSource || !shortestPathTarget) return;
+        
+        isAlgoRunning = true;
+        buttons.runAlgo.style.display = 'none';
+        buttons.stopAlgo.style.display = 'block';
+        buttons.vizPanel.classList.add('active');
+
+        const result = await graph.runShortestPath(shortestPathSource.id, shortestPathTarget.id, (state) => {
+            buttons.vizQueue.innerHTML = `<div class="status-info">${state.message}</div>`;
+        });
+
+        if (result && result.path) {
+            buttons.vizOrder.innerHTML = `
+                <div class="path-result">
+                    <div class="total-dist">Distance: ${result.distance}</div>
+                    <div class="viz-nodes-row">
+                        ${result.path.map(node => `<span class="viz-node">${node.label}</span>`).join(' → ')}
+                    </div>
+                </div>`;
+        } else {
+            buttons.vizOrder.innerHTML = '<div class="empty-state">No path found</div>';
+        }
+
+        isAlgoRunning = false;
+        buttons.runAlgo.style.display = 'block';
+        buttons.stopAlgo.style.display = 'none';
+        return;
+    }
+
+    if (!graph.selectedElement || graph.selectedElement.type !== 'node') return;
     
     isAlgoRunning = true;
     buttons.runAlgo.style.display = 'none';
@@ -360,14 +412,23 @@ buttons.runAlgo.addEventListener('click', async () => {
     
     const startNode = graph.selectedElement.data;
     
-    await graph.runBFS(startNode.id, (state) => {
-        buttons.vizQueue.innerHTML = state.queue.length > 0 
+    const updateViz = (state) => {
+        buttons.vizQueue.innerHTML = state.queue && state.queue.length > 0 
             ? state.queue.map(label => `<span class="viz-node">${label}</span>`).join('')
-            : '<div class="empty-state">Queue is empty</div>';
+            : (state.stack && state.stack.length > 0
+                ? state.stack.map(label => `<span class="viz-node">${label}</span>`).join('')
+                : `<div class="empty-state">${algo === 'bfs' ? 'Queue' : 'Stack'} is empty</div>`);
+        
         buttons.vizOrder.innerHTML = state.order.length > 0
             ? state.order.map((label, i) => `<span class="viz-node ${label === state.currentNode ? 'current' : ''}">${label}</span>`).join('')
             : '<div class="empty-state">No nodes visited</div>';
-    });
+    };
+
+    if (algo === 'bfs') {
+        await graph.runBFS(startNode.id, updateViz);
+    } else if (algo === 'dfs') {
+        await graph.runDFS(startNode.id, updateViz);
+    }
     
     if (isAlgoRunning) {
         isAlgoRunning = false;
@@ -382,17 +443,40 @@ buttons.stopAlgo.addEventListener('click', () => {
     buttons.runAlgo.style.display = 'block';
     buttons.stopAlgo.style.display = 'none';
     
-    buttons.vizQueue.innerHTML = '<div class="empty-state">Queue is empty</div>';
-    buttons.vizOrder.innerHTML = '<div class="empty-state">No nodes visited</div>';
+    if (buttons.algoSelect.value === 'shortest-path') {
+        shortestPathSource = null;
+        shortestPathTarget = null;
+        buttons.vizQueue.innerHTML = '<div class="empty-state">Select Source Node</div>';
+        buttons.vizOrder.innerHTML = '<div class="empty-state">No path computed</div>';
+    } else {
+        buttons.vizQueue.innerHTML = '<div class="empty-state">Empty</div>';
+        buttons.vizOrder.innerHTML = '<div class="empty-state">No nodes visited</div>';
+    }
 });
 
 graph.onSelectionChange = (selection) => {
+    const algo = buttons.algoSelect.value;
+
+    if (algo === 'shortest-path' && selection && selection.type === 'node') {
+        if (!shortestPathSource) {
+            shortestPathSource = selection.data;
+            selection.data.element.querySelector('.node').classList.add('processing');
+            buttons.vizQueue.innerHTML = '<div class="empty-state">Select Target Node</div>';
+        } else if (!shortestPathTarget && selection.data !== shortestPathSource) {
+            shortestPathTarget = selection.data;
+            selection.data.element.querySelector('.node').classList.add('processing');
+            buttons.runAlgo.disabled = false;
+            buttons.vizQueue.innerHTML = '<div class="empty-state">Ready to Run</div>';
+        }
+        return;
+    }
+
     if (selection && selection.type === 'node') {
         buttons.nodeNameInput.value = selection.data.label;
-        if (buttons.algoSelect.value !== 'none') buttons.runAlgo.disabled = false;
+        if (buttons.algoSelect.value !== 'none' && buttons.algoSelect.value !== 'shortest-path') buttons.runAlgo.disabled = false;
     } else {
         buttons.nodeNameInput.value = graph.nextNodeName;
-        buttons.runAlgo.disabled = true;
+        if (buttons.algoSelect.value !== 'shortest-path') buttons.runAlgo.disabled = true;
     }
 };
 

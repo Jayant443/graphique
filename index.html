@@ -27,6 +27,8 @@
                         <select id="select-algo">
                             <option value="none">Select Algorithm</option>
                             <option value="bfs">Breadth-First Search (BFS)</option>
+                            <option value="dfs">Depth-First Search (DFS)</option>
+                            <option value="shortest-path">Shortest Path</option>
                         </select>
                         <button id="btn-run-algo" class="algo-btn" disabled>Run Algorithm</button>
                         <button id="btn-stop-algo" class="algo-btn danger">Stop</button>
@@ -203,12 +205,12 @@
         <aside id="viz-panel" class="side-panel-right">
             <header class="panel-section-header">
                 <h3>Visualization</h3>
-                <p id="viz-algo-name">BFS State</p>
+                <p id="viz-algo-name">Algorithm State</p>
             </header>
             <div class="panel-section">
-                <h4>Queue</h4>
+                <h4 id="viz-structure-label">Structure</h4>
                 <div class="panel-card viz-card" id="viz-queue">
-                    <div class="empty-state">Queue is empty</div>
+                    <div class="empty-state">Empty</div>
                 </div>
             </div>
             <div class="panel-section">
