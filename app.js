@@ -355,9 +355,14 @@ let shortestPathTarget = null;
 
 buttons.algoSelect.addEventListener('change', () => {
     const val = buttons.algoSelect.value;
+    isAlgoRunning = false;
+    graph.stopAlgorithm();
+    buttons.runAlgo.style.display = 'block';
+    buttons.stopAlgo.style.display = 'none';
+
     shortestPathSource = null;
     shortestPathTarget = null;
-    
+
     if (val === 'shortest-path') {
         buttons.runAlgo.disabled = true;
         buttons.vizAlgoName.textContent = 'Shortest Path';
