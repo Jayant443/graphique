@@ -19,8 +19,15 @@ const buttons = {
     nodeNameInput: document.getElementById('input-node-name'),
     graphType: document.getElementById('select-graph-type'),
     more: document.getElementById('btn-more'),
-    moreMenu: document.getElementById('more-options-menu')
+    moreMenu: document.getElementById('more-options-menu'),
+    algoSelect: document.getElementById('select-algo'),
+    runAlgo: document.getElementById('btn-run-algo'),
+    stopAlgo: document.getElementById('btn-stop-algo'),
+    vizPanel: document.getElementById('viz-panel'),
+    vizQueue: document.getElementById('viz-queue'),
+    vizOrder: document.getElementById('viz-order')
 };
+
 function setActiveButton(activeId) {
     Object.entries(buttons).forEach(([id, btn]) => {
         if (btn && btn.tagName === 'BUTTON') {
@@ -28,6 +35,7 @@ function setActiveButton(activeId) {
         }
     });
 }
+
 buttons.select.addEventListener('click', () => {
     graph.setMode('select');
     setActiveButton('select');
@@ -51,20 +59,25 @@ buttons.clear.addEventListener('click', () => {
 buttons.undo.addEventListener('click', () => graph.undo());
 buttons.redo.addEventListener('click', () => graph.redo());
 
-// Dropdown Toggle
-buttons.more.addEventListener('click', (e) => {
-    e.stopPropagation();
-    buttons.moreMenu.classList.toggle('show');
-});
+if (buttons.more && buttons.moreMenu) {
+    buttons.more.onclick = (e) => {
+        e.stopPropagation();
+        buttons.moreMenu.classList.toggle('show');
+    };
 
-// Close dropdown when clicking outside
-window.addEventListener('click', (e) => {
-    if (!e.target.closest('.dropdown-container')) {
-        buttons.moreMenu.classList.remove('show');
-    }
-});
+    window.onclick = (e) => {
+        if (!e.target.closest('.dropdown-container')) {
+            buttons.moreMenu.classList.remove('show');
+        }
+    };
 
-// Export JSON
+    buttons.moreMenu.onclick = (e) => {
+        if (e.target.closest('button')) {
+            buttons.moreMenu.classList.remove('show');
+        }
+    };
+}
+
 buttons.export.addEventListener('click', () => {
     const data = JSON.stringify(graph.serialize(), null, 2);
     const blob = new Blob([data], { type: 'application/json' });
@@ -76,7 +89,6 @@ buttons.export.addEventListener('click', () => {
     URL.revokeObjectURL(url);
 });
 
-// Import JSON
 buttons.import.addEventListener('click', () => buttons.importInput.click());
 buttons.importInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -86,8 +98,6 @@ buttons.importInput.addEventListener('change', (e) => {
         try {
             const data = JSON.parse(event.target.result);
             graph.deserialize(data);
-            
-            // Sync UI settings
             if (data.settings) {
                 if (data.settings.physics) {
                     buttons.edgeLength.value = data.settings.physics.edgeLength;
@@ -102,15 +112,12 @@ buttons.importInput.addEventListener('change', (e) => {
         }
     };
     reader.readAsText(file);
-    e.target.value = ''; // Reset input
+    e.target.value = '';
 });
 
-// Download PNG
 buttons.download.addEventListener('click', () => {
     const svg = document.getElementById('graph-container');
     const svgClone = svg.cloneNode(true);
-    
-    // Inline necessary styles
     const style = document.createElement('style');
     style.textContent = `
         :root {
@@ -129,10 +136,11 @@ buttons.download.addEventListener('click', () => {
         .edge.selected { stroke: #3182ce; stroke-width: 4px; }
         .edge-label-bg { fill: white; fill-opacity: 0.8; }
         .edge-label { font-size: 12px; font-weight: 600; text-anchor: middle; fill: #1a202c; font-family: sans-serif; }
+        .edge.traversed { stroke: var(--primary-color); stroke-width: 3px; }
+        .node.visited { fill: #ebf8ff; stroke: var(--primary-color); }
+        .node.processing { fill: var(--primary-color); stroke: var(--primary-hover); }
     `;
     svgClone.prepend(style);
-    
-    // Ensure dimensions and namespace
     const width = svg.clientWidth;
     const height = svg.clientHeight;
     svgClone.setAttribute('width', width);
@@ -187,8 +195,6 @@ const panelElements = {
 graph.onGraphUpdate = (data) => {
     const { nodes, adjList, treeInfo } = data;
     const isTree = treeInfo.isTree;
-    
-    // Update panel header with badge
     const header = document.querySelector('.panel-section-header');
     let badge = header.querySelector('.status-badge');
     if (!badge) {
@@ -204,7 +210,6 @@ graph.onGraphUpdate = (data) => {
         const node = nodes.find(n => n.id === nodeId);
         const neighborLabels = neighbors.map(neighbor => {
             const target = nodes.find(n => n.id === neighbor.id);
-            // Always show weights in list if weighted, for editing
             return graph.isWeighted ? `${target.label}(${neighbor.weight})` : target.label;
         });
         listHtml += `
@@ -223,7 +228,6 @@ graph.onGraphUpdate = (data) => {
             matrixHtml += `<tr><th>${rowNode.label[0]}</th>`;
             nodes.forEach(colNode => {
                 const connection = adjList.get(rowNode.id).find(n => n.id === colNode.id);
-                // Show weight or 1 if connected, else 0
                 const cellValue = connection ? (graph.isWeighted ? connection.weight : '1') : '0';
                 matrixHtml += `<td contenteditable="true" data-source-id="${rowNode.id}" data-target-id="${colNode.id}">${cellValue}</td>`;
             });
@@ -234,7 +238,6 @@ graph.onGraphUpdate = (data) => {
         panelElements.adjMatrix.innerHTML = '';
     }
 
-    // Toggle weight labels on edges visually (still hide if tree as per physics rule)
     graph.edges.forEach(edge => {
         if (edge.labelGroup) {
             edge.labelGroup.style.display = (graph.isWeighted && !isTree) ? 'block' : 'none';
@@ -295,7 +298,6 @@ panelElements.adjList.addEventListener('keydown', (e) => {
                 return true;
             });
             labels.forEach(label => {
-                // Handle weighted format in adj list if present: label(weight)
                 const match = label.match(/^([^(]+)(?:\(([^)]+)\))?$/);
                 if (match) {
                     const nodeLabel = match[1].trim();
@@ -335,13 +337,64 @@ buttons.nodeNameInput.addEventListener('input', (e) => {
 buttons.graphType.addEventListener('change', (e) => {
     graph.setWeighted(e.target.value === 'weighted');
 });
+
+let isAlgoRunning = false;
+
+buttons.algoSelect.addEventListener('change', () => {
+    const val = buttons.algoSelect.value;
+    buttons.runAlgo.disabled = (val === 'none' || !graph.selectedElement || graph.selectedElement.type !== 'node');
+    if (val === 'none') {
+        buttons.vizPanel.classList.remove('active');
+        graph.clearHighlights();
+    }
+});
+
+buttons.runAlgo.addEventListener('click', async () => {
+    if (isAlgoRunning || !graph.selectedElement || graph.selectedElement.type !== 'node') return;
+    
+    isAlgoRunning = true;
+    buttons.runAlgo.style.display = 'none';
+    buttons.stopAlgo.style.display = 'block';
+    buttons.vizPanel.classList.add('active');
+    
+    const startNode = graph.selectedElement.data;
+    
+    await graph.runBFS(startNode.id, (state) => {
+        buttons.vizQueue.innerHTML = state.queue.length > 0 
+            ? state.queue.map(label => `<span class="viz-node">${label}</span>`).join('')
+            : '<div class="empty-state">Queue is empty</div>';
+        buttons.vizOrder.innerHTML = state.order.length > 0
+            ? state.order.map((label, i) => `<span class="viz-node ${label === state.currentNode ? 'current' : ''}">${label}</span>`).join('')
+            : '<div class="empty-state">No nodes visited</div>';
+    });
+    
+    if (isAlgoRunning) {
+        isAlgoRunning = false;
+        buttons.runAlgo.style.display = 'block';
+        buttons.stopAlgo.style.display = 'none';
+    }
+});
+
+buttons.stopAlgo.addEventListener('click', () => {
+    isAlgoRunning = false;
+    graph.stopAlgorithm();
+    buttons.runAlgo.style.display = 'block';
+    buttons.stopAlgo.style.display = 'none';
+    
+    buttons.vizQueue.innerHTML = '<div class="empty-state">Queue is empty</div>';
+    buttons.vizOrder.innerHTML = '<div class="empty-state">No nodes visited</div>';
+});
+
 graph.onSelectionChange = (selection) => {
     if (selection && selection.type === 'node') {
         buttons.nodeNameInput.value = selection.data.label;
+        if (buttons.algoSelect.value !== 'none') buttons.runAlgo.disabled = false;
     } else {
         buttons.nodeNameInput.value = graph.nextNodeName;
+        buttons.runAlgo.disabled = true;
     }
 };
+
 window.addEventListener('keydown', (e) => {
     if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
     if (e.key === 's' || e.key === 'S') buttons.select.click();
@@ -359,6 +412,7 @@ window.addEventListener('keydown', (e) => {
         graph.redo();
     }
 });
+
 const svgWidth = 1000;
 const svgHeight = 600;
 const centerX = svgWidth / 2;

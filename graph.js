@@ -24,6 +24,7 @@ class Graph {
         this.redoStack = [];
         this.isRestoring = false;
         this.isWeighted = false;
+        this.bfsController = null;
         this.initInteractions();
         this.animate();
         this.updateModeUI();
@@ -197,11 +198,24 @@ class Graph {
 
     analyzeTree(nodes, adjList) {
         if (nodes.length === 0) return { isTree: false };
+        const visited = new Set();
+        const queue = [nodes[0].id];
+        visited.add(nodes[0].id);
         
-        // A tree must be connected and have exactly n-1 edges. 
-        // For simplicity in this editor, we check edges count and cycles.
-        // We also check if it's connected (all nodes reachable from one node).
-        const isTree = nodes.length > 0 && 
+        let head = 0;
+        while(head < queue.length) {
+            const id = queue[head++];
+            const neighbors = adjList.get(id) || [];
+            for(const neighbor of neighbors) {
+                if(!visited.has(neighbor.id)) {
+                    visited.add(neighbor.id);
+                    queue.push(neighbor.id);
+                }
+            }
+        }
+        const isConnected = visited.size === nodes.length;
+
+        const isTree = isConnected && 
                        this.edges.length === nodes.length - 1 && 
                        !this.hasCycle(nodes, adjList);
         
@@ -625,10 +639,7 @@ class Graph {
             const dy = edge.target.y - edge.source.y;
             const dist = Math.sqrt(dx * dx + dy * dy) || 1;
             
-            // Tree overrides weight, forcing unweighted behavior
             const weight = (edge.weight !== undefined) ? edge.weight : 1;
-            
-            // Prevent exactly 0 to avoid collapse, use small minimum
             const effectiveWeight = Math.max(0.1, weight);
             const targetLength = (this.isWeighted && !isTree) ? this.edgeLength * effectiveWeight : this.edgeLength;
             
@@ -696,5 +707,82 @@ class Graph {
         this.isWeighted = weighted;
         this.wake();
         this.notifyUpdate();
+    }
+
+    async runBFS(startNodeId, onStep) {
+        this.clearHighlights();
+        const startNode = this.nodes.get(startNodeId);
+        if (!startNode) return;
+
+        const controller = { aborted: false };
+        this.bfsController = controller;
+
+        const queue = [startNode];
+        const visited = new Set([startNodeId]);
+        const order = [];
+        
+        startNode.element.querySelector('.node').classList.add('processing');
+        if (onStep) onStep({ queue: queue.map(n => n.label), order: order.map(n => n.label) });
+
+        while (queue.length > 0 && !controller.aborted) {
+            const current = queue.shift();
+            order.push(current);
+            
+            current.element.querySelector('.node').classList.remove('processing');
+            current.element.querySelector('.node').classList.add('visited');
+            
+            if (onStep) onStep({ 
+                queue: queue.map(n => n.label), 
+                order: order.map(n => n.label),
+                currentNode: current.label 
+            });
+
+            await new Promise(r => setTimeout(r, 800));
+            if (controller.aborted) break;
+
+            const neighbors = this.getGraphData().adjList.get(current.id);
+            for (const neighbor of neighbors) {
+                if (controller.aborted) break;
+                if (!visited.has(neighbor.id)) {
+                    visited.add(neighbor.id);
+                    const neighborNode = this.nodes.get(neighbor.id);
+                    
+                    const edge = this.edges.find(e => 
+                        (e.source === current && e.target === neighborNode) ||
+                        (!e.isDirected && e.source === neighborNode && e.target === current)
+                    );
+                    if (edge) edge.element.classList.add('traversed');
+
+                    neighborNode.element.querySelector('.node').classList.add('processing');
+                    queue.push(neighborNode);
+                    
+                    if (onStep) onStep({ 
+                        queue: queue.map(n => n.label), 
+                        order: order.map(n => n.label) 
+                    });
+                    await new Promise(r => setTimeout(r, 400));
+                }
+            }
+        }
+        this.bfsController = null;
+    }
+
+    stopAlgorithm() {
+        if (this.bfsController) {
+            this.bfsController.aborted = true;
+        }
+        this.clearHighlights();
+    }
+
+    clearHighlights() {
+        this.nodes.forEach(n => {
+            if(n.element) {
+                const circle = n.element.querySelector('.node');
+                if(circle) circle.classList.remove('visited', 'processing');
+            }
+        });
+        this.edges.forEach(e => {
+            if(e.element) e.element.classList.remove('traversed');
+        });
     }
 }
