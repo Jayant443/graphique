@@ -122,10 +122,11 @@ buttons.download.addEventListener('click', () => {
     style.textContent = `
         :root {
             --node-fill: #ffffff;
-            --node-stroke: #2d3748;
-            --edge-stroke: #cbd5e0;
-            --primary-color: #3182ce;
-            --text-color: #1a202c;
+            --node-stroke: #6c6dd5;
+            --edge-stroke: #c8cede;
+            --primary-color: #5b5bd6;
+            --primary-hover: #4848bd;
+            --text-color: #1c2440;
             --edge-width: 2px;
             --node-radius: 25px;
         }
@@ -133,11 +134,11 @@ buttons.download.addEventListener('click', () => {
         .node-label { font-size: 15px; font-weight: 600; text-anchor: middle; fill: var(--text-color); font-family: sans-serif; }
         .edge { stroke: var(--edge-stroke); stroke-width: var(--edge-width); fill: none; }
         .edge.directed { marker-end: url(#arrowhead); }
-        .edge.selected { stroke: #3182ce; stroke-width: 4px; }
-        .edge-label-bg { fill: white; fill-opacity: 0.8; }
-        .edge-label { font-size: 12px; font-weight: 600; text-anchor: middle; fill: #1a202c; font-family: sans-serif; }
+        .edge.selected { stroke: #5b5bd6; stroke-width: 4px; }
+        .edge-label-bg { fill: white; fill-opacity: 0.94; stroke: #e5e9f2; }
+        .edge-label { font-size: 11px; font-weight: 700; text-anchor: middle; fill: #525b73; font-family: sans-serif; }
         .edge.traversed { stroke: var(--primary-color); stroke-width: 3px; }
-        .node.visited { fill: #ebf8ff; stroke: var(--primary-color); }
+        .node.visited { fill: #e2faf5; stroke: #10b9a6; }
         .node.processing { fill: var(--primary-color); stroke: var(--primary-hover); }
     `;
     svgClone.prepend(style);

@@ -11,8 +11,13 @@
     <div id="app">
         <aside id="side-panel">
             <header class="panel-section-header">
-                <h2>Graphly</h2>
-                <p>Real-time analysis</p>
+                <div class="brand-mark" aria-hidden="true">
+                    <span></span><span></span><span></span>
+                </div>
+                <div class="brand-copy">
+                    <h2>Graphly</h2>
+                    <p>Visual graph studio</p>
+                </div>
             </header>
 
             <section class="panel-section">
@@ -161,10 +166,10 @@
             <svg id="graph-container">
                 <defs>
                     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
-                        <feOffset dx="1" dy="1" result="offsetblur" />
+                        <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+                        <feOffset dy="2" result="offsetblur" />
                         <feComponentTransfer>
-                            <feFuncA type="linear" slope="0.3" />
+                            <feFuncA type="linear" slope="0.18" />
                         </feComponentTransfer>
                         <feMerge>
                             <feMergeNode />
@@ -173,11 +178,11 @@
                     </filter>
                     <marker id="arrowhead" markerWidth="10" markerHeight="7" 
                     refX="20" refY="3.5" orient="auto">
-                        <polygon points="0 0, 10 3.5, 0 7" fill="#4a5568" />
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#9da5ba" />
                     </marker>
                     <marker id="arrowhead-selected" markerWidth="10" markerHeight="7" 
                     refX="20" refY="3.5" orient="auto">
-                        <polygon points="0 0, 10 3.5, 0 7" fill="#3182ce" />
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#5b5bd6" />
                     </marker>
                 </defs>
                 <g id="viewport">
@@ -185,8 +190,13 @@
                     <g id="nodes-layer"></g>
                 </g>
             </svg>
+            <div class="canvas-hint">
+                <span class="canvas-hint-icon">+</span>
+                <span>Choose <strong>Node</strong>, then click anywhere to build</span>
+            </div>
             <div id="status-bar">
-                Mode: <span id="current-mode">Select</span>
+                <span class="status-dot"></span>
+                <span id="current-mode">Select</span> mode
             </div>
         </main>
 
