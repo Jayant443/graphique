@@ -368,7 +368,6 @@ class Graph {
         g.appendChild(hitArea);
         g.appendChild(line);
 
-        // Edge Label
         const lg = document.createElementNS("http://www.w3.org/2000/svg", "g");
         lg.setAttribute("class", "edge-label-group");
         lg.style.display = this.isWeighted ? 'block' : 'none';
@@ -431,7 +430,7 @@ class Graph {
                 rect.setAttribute("y", bbox.y - 2);
                 rect.setAttribute("width", bbox.width + 8);
                 rect.setAttribute("height", bbox.height + 4);
-            } catch (e) { } // BBox might fail if hidden
+            } catch (e) { }
         }
     }
 
@@ -588,8 +587,6 @@ class Graph {
             el.setAttribute("x2", edge.target.x);
             el.setAttribute("y2", edge.target.y);
         });
-
-        // Update label position
         if (edge.labelGroup) {
             const mx = (edge.source.x + edge.target.x) / 2;
             const my = (edge.source.y + edge.target.y) / 2;
@@ -760,25 +757,31 @@ class Graph {
 
             unvisited.delete(currentId);
             const current = this.nodes.get(currentId);
+            current.element.querySelector('.node').classList.remove('processing');
             current.element.querySelector('.node').classList.add('visited');
+
+            if (onStep) onStep({ message: `Exploring from ${current.label}...` });
+            await new Promise(r => setTimeout(r, 800));
+            if (controller.aborted) break;
 
             const neighbors = adj.get(currentId);
             for (const neighbor of neighbors) {
+                if (controller.aborted) break;
                 if (!unvisited.has(neighbor.id)) continue;
 
+                const neighborNode = this.nodes.get(neighbor.id);
                 const weight = this.isWeighted ? neighbor.weight : 1;
                 const alt = distances.get(currentId) + weight;
                 if (alt < distances.get(neighbor.id)) {
                     distances.set(neighbor.id, alt);
                     previous.set(neighbor.id, currentId);
 
-                    const neighborNode = this.nodes.get(neighbor.id);
                     neighborNode.element.querySelector('.node').classList.add('processing');
+                    
+                    if (onStep) onStep({ message: `Relaxing edge to ${neighborNode.label}: new distance ${alt}` });
+                    await new Promise(r => setTimeout(r, 400));
                 }
             }
-
-            if (onStep) onStep({ message: `Exploring... Current min distance: ${minDistance}` });
-            await new Promise(r => setTimeout(r, 100));
         }
 
         const path = [];
