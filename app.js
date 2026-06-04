@@ -121,6 +121,11 @@ buttons.importInput.addEventListener('change', (e) => {
 
 buttons.download.addEventListener('click', () => {
     const svg = document.getElementById('graph-container');
+    const width = svg.clientWidth;
+    const height = svg.clientHeight;
+    const infoWidth = 300;
+    const padding = 20;
+
     const svgClone = svg.cloneNode(true);
     const style = document.createElement('style');
     style.textContent = `
@@ -146,8 +151,6 @@ buttons.download.addEventListener('click', () => {
         .node.processing { fill: var(--primary-color); stroke: var(--primary-hover); }
     `;
     svgClone.prepend(style);
-    const width = svg.clientWidth;
-    const height = svg.clientHeight;
     svgClone.setAttribute('width', width);
     svgClone.setAttribute('height', height);
     svgClone.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -156,29 +159,127 @@ buttons.download.addEventListener('click', () => {
     const svgData = new XMLSerializer().serializeToString(svgClone);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    const img = new Image();
-    
-    canvas.width = width * 2;
+    canvas.width = (width + infoWidth) * 2;
     canvas.height = height * 2;
-    
+    ctx.scale(2, 2);
+
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
     
     img.onload = () => {
         ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.scale(2, 2);
+        ctx.fillRect(0, 0, width + infoWidth, height);
         ctx.drawImage(img, 0, 0);
+        ctx.fillStyle = '#f9fafd';
+        ctx.fillRect(width, 0, infoWidth, height);
+        ctx.strokeStyle = '#e5e9f2';
+        ctx.beginPath();
+        ctx.moveTo(width, 0);
+        ctx.lineTo(width, height);
+        ctx.stroke();
+        ctx.fillStyle = '#1c2440';
+        ctx.font = 'bold 16px sans-serif';
+        let y = 40;
+        
+        ctx.fillText('Graph Details', width + padding, y);
+        y += 30;
+
+        const data = graph.getGraphData();
+
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillText('Adjacency List', width + padding, y);
+        y += 20;
+        ctx.font = '11px monospace';
+        ctx.fillStyle = '#525b73';
+        
+        data.adjList.forEach((neighbors, nodeId) => {
+            const node = data.nodes.find(n => n.id === nodeId);
+            const neighborLabels = neighbors.map(nb => {
+                const target = data.nodes.find(n => n.id === nb.id);
+                return graph.isWeighted ? `${target.label}(${nb.weight})` : target.label;
+            });
+            const text = `${node.label}: ${neighborLabels.join(', ') || '-'}`;
+            const words = text.split(' ');
+            let line = '';
+            for(let n = 0; words.length > 0 && n < words.length; n++) {
+                let testLine = line + words[n] + ' ';
+                let metrics = ctx.measureText(testLine);
+                if (metrics.width > infoWidth - (padding * 2) && n > 0) {
+                    ctx.fillText(line, width + padding, y);
+                    line = words[n] + ' ';
+                    y += 15;
+                } else {
+                    line = testLine;
+                }
+            }
+            ctx.fillText(line, width + padding, y);
+            y += 15;
+        });
+
+        y += 20;
+        ctx.fillStyle = '#1c2440';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillText('Adjacency Matrix', width + padding, y);
+        y += 20;
+        ctx.font = '10px monospace';
+        ctx.fillStyle = '#525b73';
+
+        if (data.nodes.length > 0 && data.nodes.length <= 15) {
+            let header = '  ' + data.nodes.map(n => n.label[0]).join(' ');
+            ctx.fillText(header, width + padding, y);
+            y += 15;
+            data.nodes.forEach(rowNode => {
+                let row = rowNode.label[0] + ' ';
+                data.nodes.forEach(colNode => {
+                    const conn = data.adjList.get(rowNode.id).find(n => n.id === colNode.id);
+                    row += (conn ? (graph.isWeighted ? conn.weight : '1') : '0') + ' ';
+                });
+                ctx.fillText(row, width + padding, y);
+                y += 12;
+            });
+        } else if (data.nodes.length > 15) {
+            ctx.fillText('(Matrix too large for preview)', width + padding, y);
+            y += 15;
+        }
+
+        y += 20;
+
+        if (buttons.vizPanel.classList.contains('active')) {
+            ctx.fillStyle = '#5b5bd6';
+            ctx.font = 'bold 13px sans-serif';
+            ctx.fillText(buttons.vizAlgoName.textContent, width + padding, y);
+            y += 20;
+            
+            ctx.fillStyle = '#525b73';
+            ctx.font = '11px sans-serif';
+            const orderNodes = Array.from(buttons.vizOrder.querySelectorAll('.viz-node')).map(el => el.textContent);
+            if (orderNodes.length > 0) {
+                ctx.fillText('Order/Path:', width + padding, y);
+                y += 15;
+                let pathText = orderNodes.join(' → ');
+                const words = pathText.split(' ');
+                let line = '';
+                for(let n = 0; n < words.length; n++) {
+                    let testLine = line + words[n] + ' ';
+                    if (ctx.measureText(testLine).width > infoWidth - (padding * 2)) {
+                        ctx.fillText(line, width + padding, y);
+                        line = words[n] + ' ';
+                        y += 15;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                ctx.fillText(line, width + padding, y);
+            }
+        }
+
         const pngUrl = canvas.toDataURL('image/png');
         const a = document.createElement('a');
         a.href = pngUrl;
-        a.download = `graph-${Date.now()}.png`;
+        a.download = `graph-data-${Date.now()}.png`;
         a.click();
         URL.revokeObjectURL(url);
-    };
-    img.onerror = (e) => {
-        console.error('Error loading SVG for image export', e);
-        alert('Failed to export image. Try again.');
     };
     img.src = url;
 });
