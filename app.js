@@ -71,14 +71,27 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'e' || e.key === 'E') buttons.addEdge.click();
     if (e.key === 'Delete' || e.key === 'Backspace') graph.deleteSelected();
 });
+const svgWidth = 1000;
+const svgHeight = 600;
+const centerX = svgWidth / 2;
+const startY = 100;
+const levelHeight = 120;
+const horizontalGap = 200;
+
 const demoNodes = [
-    { id: '1', label: 'ROOT' },
-    { id: '2', label: 'A' },
-    { id: '3', label: 'B' },
-    { id: '4', label: 'C' },
+    { id: '1', label: 'Root', x: centerX, y: startY },
+    { id: '2', label: 'A', x: centerX - horizontalGap, y: startY + levelHeight },
+    { id: '3', label: 'B', x: centerX + horizontalGap, y: startY + levelHeight },
+    { id: '4', label: 'C', x: centerX - horizontalGap - horizontalGap/2, y: startY + 2 * levelHeight },
+    { id: '5', label: 'D', x: centerX - horizontalGap + horizontalGap/2, y: startY + 2 * levelHeight },
+    { id: '6', label: 'E', x: centerX + horizontalGap - horizontalGap/2, y: startY + 2 * levelHeight },
+    { id: '7', label: 'F', x: centerX + horizontalGap + horizontalGap/2, y: startY + 2 * levelHeight }
 ];
-demoNodes.forEach(n => graph.addNode(n.id, n.label));
+
+demoNodes.forEach(n => graph.addNode(n.id, n.label, n.x, n.y));
 graph.addEdge('1', '2');
 graph.addEdge('1', '3');
 graph.addEdge('2', '4');
-graph.addEdge('3', '4');
+graph.addEdge('2', '5');
+graph.addEdge('3', '6');
+graph.addEdge('3', '7');
