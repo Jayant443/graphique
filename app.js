@@ -47,6 +47,49 @@ buttons.edgeLength.addEventListener('input', (e) => {
     graph.setPhysicsProperty('edgeLength', e.target.value);
     buttons.edgeLengthVal.textContent = e.target.value;
 });
+
+// Side Panel UI Elements
+const panelElements = {
+    adjList: document.getElementById('adj-list-container'),
+    adjMatrix: document.getElementById('adj-matrix-table')
+};
+
+graph.onGraphUpdate = (data) => {
+    const { nodes, adjList } = data;
+
+    // Update Adjacency List
+    let listHtml = '';
+    adjList.forEach((neighbors, nodeId) => {
+        const node = nodes.find(n => n.id === nodeId);
+        const neighborLabels = neighbors.map(id => nodes.find(n => n.id === id).label);
+        listHtml += `
+            <div class="adj-list-item">
+                <span class="adj-list-node">${node.label}:</span>
+                <span>${neighborLabels.join(', ') || '∅'}</span>
+            </div>`;
+    });
+    panelElements.adjList.innerHTML = listHtml || 'No nodes';
+
+    // Update Adjacency Matrix
+    if (nodes.length > 0) {
+        let matrixHtml = '<tr><th></th>' + nodes.map(n => `<th>${n.label[0]}</th>`).join('') + '</tr>';
+        nodes.forEach(rowNode => {
+            matrixHtml += `<tr><th>${rowNode.label[0]}</th>`;
+            nodes.forEach(colNode => {
+                const isConnected = adjList.get(rowNode.id).includes(colNode.id);
+                matrixHtml += `<td>${isConnected ? '1' : '0'}</td>`;
+            });
+            matrixHtml += '</tr>';
+        });
+        panelElements.adjMatrix.innerHTML = matrixHtml;
+    } else {
+        panelElements.adjMatrix.innerHTML = '';
+    }
+};
+
+// Trigger initial update
+graph.notifyUpdate();
+
 buttons.directed.addEventListener('change', (e) => {
     graph.directedEdges = e.target.checked;
 });

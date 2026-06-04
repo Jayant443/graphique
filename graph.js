@@ -19,9 +19,96 @@ class Graph {
         this.isSleeping = false;
         this.energyThreshold = 0.01;
         this.onSelectionChange = null;
+        this.onGraphUpdate = null;
         this.initInteractions();
         this.animate();
         this.updateModeUI();
+    }
+
+    notifyUpdate() {
+        if (this.onGraphUpdate) {
+            this.onGraphUpdate(this.getGraphData());
+        }
+    }
+
+    getGraphData() {
+        const nodesArr = Array.from(this.nodes.values());
+        const adjList = new Map();
+        nodesArr.forEach(n => adjList.set(n.id, []));
+        this.edges.forEach(e => {
+            adjList.get(e.source.id).push(e.target.id);
+            if (!e.isDirected) {
+                adjList.get(e.target.id).push(e.source.id);
+            }
+        });
+
+        const treeInfo = this.analyzeTree(nodesArr, adjList);
+
+        return {
+            nodes: nodesArr,
+            edges: this.edges,
+            adjList,
+            treeInfo
+        };
+    }
+
+    analyzeTree(nodes, adjList) {
+        if (nodes.length === 0) return null;
+        const isTree = this.edges.length === nodes.length - 1 && !this.hasCycle(nodes, adjList);
+        if (!isTree) return null;
+        let root = nodes[0];
+        if (this.directedEdges) {
+            const inDegrees = new Map();
+            nodes.forEach(n => inDegrees.set(n.id, 0));
+            this.edges.forEach(e => inDegrees.set(e.target.id, inDegrees.get(e.target.id) + 1));
+            root = nodes.find(n => inDegrees.get(n.id) === 0) || nodes[0];
+        }
+
+        const leaves = [];
+        const childrenMap = new Map();
+        
+        nodes.forEach(node => {
+            const children = adjList.get(node.id).filter(id => {
+                return true; 
+            });
+            const outEdges = this.edges.filter(e => e.source.id === node.id).map(e => e.target.id);
+            childrenMap.set(node.id, outEdges);
+            if (outEdges.length === 0) leaves.push(node);
+        });
+
+        return {
+            root,
+            leaves,
+            childrenMap
+        };
+    }
+
+    hasCycle(nodes, adjList) {
+        const visited = new Set();
+        const recStack = new Set();
+
+        const checkCycle = (nodeId) => {
+            if (recStack.has(nodeId)) return true;
+            if (visited.has(nodeId)) return false;
+
+            visited.add(nodeId);
+            recStack.add(nodeId);
+
+            const neighbors = adjList.get(nodeId);
+            for (const neighborId of neighbors) {
+                if (checkCycle(neighborId)) return true;
+            }
+
+            recStack.delete(nodeId);
+            return false;
+        };
+
+        for (const node of nodes) {
+            if (!visited.has(node.id)) {
+                if (checkCycle(node.id)) return true;
+            }
+        }
+        return false;
     }
 
     wake() {
@@ -73,6 +160,7 @@ class Graph {
         this.createNodeElement(node);
         this.nodes.set(id, node);
         this.wake();
+        this.notifyUpdate();
         return node;
     }
 
@@ -115,6 +203,7 @@ class Graph {
         this.createEdgeElement(edge);
         this.edges.push(edge);
         this.wake();
+        this.notifyUpdate();
         return edge;
     }
 
@@ -148,6 +237,7 @@ class Graph {
             if (textElement) {
                 textElement.textContent = newLabel;
             }
+            this.notifyUpdate();
         }
     }
 
@@ -261,6 +351,7 @@ class Graph {
         this.selectedElement = null;
         if (this.onSelectionChange) this.onSelectionChange(null);
         this.wake();
+        this.notifyUpdate();
     }
 
     getRelativePoint(clientX, clientY) {
@@ -365,6 +456,7 @@ class Graph {
         });
         node.element.remove();
         this.nodes.delete(id);
+        this.notifyUpdate();
     }
 
     removeEdge(sourceId, targetId) {
@@ -375,6 +467,7 @@ class Graph {
             }
             return true;
         });
+        this.notifyUpdate();
     }
 
     clear() {
@@ -384,5 +477,6 @@ class Graph {
         this.edges = [];
         this.selectedElement = null;
         this.wake();
+        this.notifyUpdate();
     }
 }
