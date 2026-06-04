@@ -6,7 +6,9 @@ const buttons = {
     delete: document.getElementById('btn-delete'),
     clear: document.getElementById('btn-clear'),
     nodeSize: document.getElementById('slider-node-size'),
+    nodeSizeVal: document.getElementById('val-node-size'),
     edgeLength: document.getElementById('slider-edge-length'),
+    edgeLengthVal: document.getElementById('val-edge-length'),
     directed: document.getElementById('check-directed'),
     nodeNameInput: document.getElementById('input-node-name')
 };
@@ -39,9 +41,11 @@ buttons.clear.addEventListener('click', () => {
 });
 buttons.nodeSize.addEventListener('input', (e) => {
     graph.setVisualScale('node-radius', e.target.value);
+    buttons.nodeSizeVal.textContent = e.target.value;
 });
 buttons.edgeLength.addEventListener('input', (e) => {
     graph.setPhysicsProperty('edgeLength', e.target.value);
+    buttons.edgeLengthVal.textContent = e.target.value;
 });
 buttons.directed.addEventListener('change', (e) => {
     graph.directedEdges = e.target.checked;
@@ -68,16 +72,13 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'Delete' || e.key === 'Backspace') graph.deleteSelected();
 });
 const demoNodes = [
-    { id: '1', label: 'Main' },
-    { id: '2', label: 'Sub A' },
-    { id: '3', label: 'Sub B' },
-    { id: '4', label: 'Feature' },
-    { id: '5', label: 'Extra' }
+    { id: '1', label: 'ROOT' },
+    { id: '2', label: 'A' },
+    { id: '3', label: 'B' },
+    { id: '4', label: 'C' },
 ];
 demoNodes.forEach(n => graph.addNode(n.id, n.label));
-graph.addEdge('1', '2', true);
-graph.addEdge('1', '3', true);
-graph.addEdge('2', '4', true);
-graph.addEdge('3', '4', true);
-graph.addEdge('4', '5', false);
-graph.addEdge('5', '1', true);
+graph.addEdge('1', '2');
+graph.addEdge('1', '3');
+graph.addEdge('2', '4');
+graph.addEdge('3', '4');

@@ -34,11 +34,17 @@
             <div class="separator"></div>
             <div class="toolbar-control">
                 <label>Node Size</label>
-                <input type="range" id="slider-node-size" min="5" max="40" value="15">
+                <div class="slider-wrapper">
+                    <span id="val-node-size" class="slider-value">15</span>
+                    <input type="range" id="slider-node-size" min="5" max="40" value="15">
+                </div>
             </div>
             <div class="toolbar-control">
                 <label>Edge Length</label>
-                <input type="range" id="slider-edge-length" min="50" max="300" value="150">
+                <div class="slider-wrapper">
+                    <span id="val-edge-length" class="slider-value">150</span>
+                    <input type="range" id="slider-edge-length" min="50" max="300" value="150">
+                </div>
             </div>
             <div class="separator"></div>
             <button id="btn-delete" class="danger" title="Delete Selected (Del)">

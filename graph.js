@@ -15,7 +15,6 @@ class Graph {
         this.repulsion = 400;
         this.attraction = 0.01;
         this.edgeLength = 150;
-        this.gravity = 0;
         this.damping = 0.7;
         this.isSleeping = false;
         this.energyThreshold = 0.01;
@@ -24,18 +23,21 @@ class Graph {
         this.animate();
         this.updateModeUI();
     }
+
     wake() {
         if (this.isSleeping) {
             this.isSleeping = false;
             this.animate();
         }
     }
+
     setMode(mode) {
         this.mode = mode;
         this.edgeSourceNode = null;
         this.deselectAll();
         this.updateModeUI();
     }
+
     updateModeUI() {
         document.body.className = `mode-${this.mode}`;
         const modeDisplay = document.getElementById('current-mode');
@@ -43,15 +45,18 @@ class Graph {
             modeDisplay.textContent = this.mode.charAt(0).toUpperCase() + this.mode.slice(1);
         }
     }
+
     setVisualScale(property, value) {
         document.documentElement.style.setProperty(`--${property}`, `${value}px`);
     }
+
     setPhysicsProperty(prop, value) {
         if (this.hasOwnProperty(prop)) {
             this[prop] = parseFloat(value);
             this.wake();
         }
     }
+
     addNode(id, label, x, y) {
         if (this.nodes.has(id)) return;
         const node = {
@@ -70,6 +75,7 @@ class Graph {
         this.wake();
         return node;
     }
+
     createNodeElement(node) {
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         g.setAttribute("class", "node-group");
@@ -88,12 +94,13 @@ class Graph {
         node.circle = circle;
         this.updateNodePosition(node);
     }
+
     addEdge(sourceId, targetId, isDirected = false) {
         const source = this.nodes.get(sourceId);
         const target = this.nodes.get(targetId);
         if (!source || !target || source === target) return;
-        const exists = this.edges.some(e => 
-            (e.source === source && e.target === target) || 
+        const exists = this.edges.some(e =>
+            (e.source === source && e.target === target) ||
             (!isDirected && e.source === target && e.target === source)
         );
         if (exists) return;
@@ -110,6 +117,7 @@ class Graph {
         this.wake();
         return edge;
     }
+
     createEdgeElement(edge) {
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         g.setAttribute("class", "edge-group");
@@ -131,6 +139,7 @@ class Graph {
         });
         this.updateEdgePosition(edge);
     }
+
     updateNodeLabel(id, newLabel) {
         const node = this.nodes.get(id);
         if (node) {
@@ -141,6 +150,7 @@ class Graph {
             }
         }
     }
+
     initInteractions() {
         let draggedNode = null;
         let isPanning = false;
@@ -218,24 +228,28 @@ class Graph {
             this.updateViewport();
         }, { passive: false });
     }
+
     selectNode(node) {
         this.deselectAll();
         node.circle.classList.add('selected');
         this.selectedElement = { type: 'node', data: node };
         if (this.onSelectionChange) this.onSelectionChange(this.selectedElement);
     }
+
     selectEdge(edge) {
         this.deselectAll();
         edge.element.classList.add('selected');
         this.selectedElement = { type: 'edge', data: edge };
         if (this.onSelectionChange) this.onSelectionChange(this.selectedElement);
     }
+
     deselectAll() {
         this.nodes.forEach(n => n.circle.classList.remove('selected'));
         this.edges.forEach(e => e.element.classList.remove('selected'));
         this.selectedElement = null;
         if (this.onSelectionChange) this.onSelectionChange(null);
     }
+
     deleteSelected() {
         if (!this.selectedElement) return;
         if (this.selectedElement.type === 'node') {
@@ -248,6 +262,7 @@ class Graph {
         if (this.onSelectionChange) this.onSelectionChange(null);
         this.wake();
     }
+
     getRelativePoint(clientX, clientY) {
         const rect = this.svg.getBoundingClientRect();
         return {
@@ -255,12 +270,15 @@ class Graph {
             y: (clientY - rect.top - this.transform.y) / this.transform.k
         };
     }
+
     updateViewport() {
         this.viewport.setAttribute("transform", `translate(${this.transform.x}, ${this.transform.y}) scale(${this.transform.k})`);
     }
+
     updateNodePosition(node) {
         node.element.setAttribute("transform", `translate(${node.x}, ${node.y})`);
     }
+
     updateEdgePosition(edge) {
         if (!edge.element || !edge.hitArea) return;
         [edge.element, edge.hitArea].forEach(el => {
@@ -270,6 +288,7 @@ class Graph {
             el.setAttribute("y2", edge.target.y);
         });
     }
+
     updateConnectedEdges(node) {
         this.edges.forEach(edge => {
             if (edge.source === node || edge.target === node) {
@@ -277,6 +296,7 @@ class Graph {
             }
         });
     }
+
     animate() {
         if (this.isSleeping) return;
         const step = () => {
@@ -293,6 +313,7 @@ class Graph {
         };
         requestAnimationFrame(step);
     }
+
     applyPhysics() {
         const nodesArr = Array.from(this.nodes.values());
         let totalEnergy = 0;
@@ -331,6 +352,7 @@ class Graph {
         });
         return totalEnergy;
     }
+
     removeNode(id) {
         const node = this.nodes.get(id);
         if (!node) return;
@@ -344,6 +366,7 @@ class Graph {
         node.element.remove();
         this.nodes.delete(id);
     }
+
     removeEdge(sourceId, targetId) {
         this.edges = this.edges.filter(edge => {
             if (edge.source.id === sourceId && edge.target.id === targetId) {
@@ -353,6 +376,7 @@ class Graph {
             return true;
         });
     }
+
     clear() {
         this.nodes.forEach(node => node.element.remove());
         this.edges.forEach(edge => edge.group.remove());

@@ -9,7 +9,7 @@
     --node-stroke: #2d3748;
     --edge-stroke: #cbd5e0;
     --selection-color: #3182ce;
-    --node-radius: 15px;
+    --node-radius: 25px;
     --edge-width: 2px;
 }
 body, html {
@@ -69,8 +69,21 @@ body, html {
     letter-spacing: 0.5px;
     color: #718096;
 }
+.toolbar-control .slider-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+}
+.toolbar-control .slider-value {
+    font-size: 11px;
+    min-width: 22px;
+    text-align: right;
+    color: var(--text-color);
+}
 .toolbar-control input[type="range"] {
-    width: 80%;
+    width: 60%;
     cursor: pointer;
 }
 #toolbar button:hover {
