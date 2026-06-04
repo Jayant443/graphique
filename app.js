@@ -16,7 +16,10 @@ const buttons = {
     edgeLength: document.getElementById('slider-edge-length'),
     edgeLengthVal: document.getElementById('val-edge-length'),
     directed: document.getElementById('check-directed'),
-    nodeNameInput: document.getElementById('input-node-name')
+    nodeNameInput: document.getElementById('input-node-name'),
+    graphType: document.getElementById('select-graph-type'),
+    more: document.getElementById('btn-more'),
+    moreMenu: document.getElementById('more-options-menu')
 };
 function setActiveButton(activeId) {
     Object.entries(buttons).forEach(([id, btn]) => {
@@ -47,6 +50,19 @@ buttons.clear.addEventListener('click', () => {
 });
 buttons.undo.addEventListener('click', () => graph.undo());
 buttons.redo.addEventListener('click', () => graph.redo());
+
+// Dropdown Toggle
+buttons.more.addEventListener('click', (e) => {
+    e.stopPropagation();
+    buttons.moreMenu.classList.toggle('show');
+});
+
+// Close dropdown when clicking outside
+window.addEventListener('click', (e) => {
+    if (!e.target.closest('.dropdown-container')) {
+        buttons.moreMenu.classList.remove('show');
+    }
+});
 
 // Export JSON
 buttons.export.addEventListener('click', () => {
@@ -79,6 +95,7 @@ buttons.importInput.addEventListener('change', (e) => {
                 }
                 buttons.directed.checked = data.settings.directedEdges;
                 buttons.nodeNameInput.value = data.settings.nextNodeName || "";
+                buttons.graphType.value = data.settings.isWeighted ? 'weighted' : 'unweighted';
             }
         } catch (err) {
             alert('Error importing graph: ' + err.message);
@@ -91,14 +108,45 @@ buttons.importInput.addEventListener('change', (e) => {
 // Download PNG
 buttons.download.addEventListener('click', () => {
     const svg = document.getElementById('graph-container');
-    const svgData = new XMLSerializer().serializeToString(svg);
+    const svgClone = svg.cloneNode(true);
+    
+    // Inline necessary styles
+    const style = document.createElement('style');
+    style.textContent = `
+        :root {
+            --node-fill: #ffffff;
+            --node-stroke: #2d3748;
+            --edge-stroke: #cbd5e0;
+            --primary-color: #3182ce;
+            --text-color: #1a202c;
+            --edge-width: 2px;
+            --node-radius: 25px;
+        }
+        .node { fill: var(--node-fill); stroke: var(--node-stroke); stroke-width: 2px; }
+        .node-label { font-size: 15px; font-weight: 600; text-anchor: middle; fill: var(--text-color); font-family: sans-serif; }
+        .edge { stroke: var(--edge-stroke); stroke-width: var(--edge-width); fill: none; }
+        .edge.directed { marker-end: url(#arrowhead); }
+        .edge.selected { stroke: #3182ce; stroke-width: 4px; }
+        .edge-label-bg { fill: white; fill-opacity: 0.8; }
+        .edge-label { font-size: 12px; font-weight: 600; text-anchor: middle; fill: #1a202c; font-family: sans-serif; }
+    `;
+    svgClone.prepend(style);
+    
+    // Ensure dimensions and namespace
+    const width = svg.clientWidth;
+    const height = svg.clientHeight;
+    svgClone.setAttribute('width', width);
+    svgClone.setAttribute('height', height);
+    svgClone.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+    const svgData = new XMLSerializer().serializeToString(svgClone);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
     
-    // Set canvas size
-    canvas.width = svg.clientWidth * 2; // High DPI
-    canvas.height = svg.clientHeight * 2;
+    canvas.width = width * 2;
+    canvas.height = height * 2;
     
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
@@ -106,13 +154,18 @@ buttons.download.addEventListener('click', () => {
     img.onload = () => {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ctx.scale(2, 2);
+        ctx.drawImage(img, 0, 0);
         const pngUrl = canvas.toDataURL('image/png');
         const a = document.createElement('a');
         a.href = pngUrl;
         a.download = `graph-${Date.now()}.png`;
         a.click();
         URL.revokeObjectURL(url);
+    };
+    img.onerror = (e) => {
+        console.error('Error loading SVG for image export', e);
+        alert('Failed to export image. Try again.');
     };
     img.src = url;
 });
@@ -132,11 +185,28 @@ const panelElements = {
 };
 
 graph.onGraphUpdate = (data) => {
-    const { nodes, adjList } = data;
+    const { nodes, adjList, treeInfo } = data;
+    const isTree = treeInfo.isTree;
+    
+    // Update panel header with badge
+    const header = document.querySelector('.panel-section-header');
+    let badge = header.querySelector('.status-badge');
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'status-badge';
+        header.appendChild(badge);
+    }
+    badge.textContent = isTree ? 'Tree Detected' : 'General Graph';
+    badge.className = `status-badge ${isTree ? 'badge-tree' : 'badge-graph'}`;
+
     let listHtml = '';
     adjList.forEach((neighbors, nodeId) => {
         const node = nodes.find(n => n.id === nodeId);
-        const neighborLabels = neighbors.map(id => nodes.find(n => n.id === id).label);
+        const neighborLabels = neighbors.map(neighbor => {
+            const target = nodes.find(n => n.id === neighbor.id);
+            // Always show weights in list if weighted, for editing
+            return graph.isWeighted ? `${target.label}(${neighbor.weight})` : target.label;
+        });
         listHtml += `
             <div class="adj-list-item" data-source-id="${node.id}">
                 <div class="adj-list-header">
@@ -152,8 +222,10 @@ graph.onGraphUpdate = (data) => {
         nodes.forEach(rowNode => {
             matrixHtml += `<tr><th>${rowNode.label[0]}</th>`;
             nodes.forEach(colNode => {
-                const isConnected = adjList.get(rowNode.id).includes(colNode.id);
-                matrixHtml += `<td>${isConnected ? '1' : '0'}</td>`;
+                const connection = adjList.get(rowNode.id).find(n => n.id === colNode.id);
+                // Show weight or 1 if connected, else 0
+                const cellValue = connection ? (graph.isWeighted ? connection.weight : '1') : '0';
+                matrixHtml += `<td contenteditable="true" data-source-id="${rowNode.id}" data-target-id="${colNode.id}">${cellValue}</td>`;
             });
             matrixHtml += '</tr>';
         });
@@ -161,11 +233,48 @@ graph.onGraphUpdate = (data) => {
     } else {
         panelElements.adjMatrix.innerHTML = '';
     }
+
+    // Toggle weight labels on edges visually (still hide if tree as per physics rule)
+    graph.edges.forEach(edge => {
+        if (edge.labelGroup) {
+            edge.labelGroup.style.display = (graph.isWeighted && !isTree) ? 'block' : 'none';
+        }
+    });
 };
 
 panelElements.adjList.addEventListener('focusout', (e) => {
     if (e.target.classList.contains('adj-list-neighbors')) {
         graph.notifyUpdate();
+    }
+});
+
+panelElements.adjMatrix.addEventListener('focusout', (e) => {
+    if (e.target.tagName === 'TD') {
+        const sourceId = e.target.dataset.sourceId;
+        const targetId = e.target.dataset.targetId;
+        const val = e.target.textContent.trim();
+        const weight = parseFloat(val);
+
+        if (val === '0' || isNaN(weight)) {
+            graph.removeEdge(sourceId, targetId);
+        } else {
+            let edge = graph.edges.find(e => e.source.id === sourceId && e.target.id === targetId);
+            if (!edge) {
+                edge = graph.addEdge(sourceId, targetId, graph.directedEdges);
+            }
+            if (edge && graph.isWeighted) {
+                graph.updateEdgeLabel(edge, val);
+            }
+        }
+        graph.notifyUpdate();
+        graph.wake();
+    }
+});
+
+panelElements.adjMatrix.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        e.target.blur();
     }
 });
 
@@ -186,9 +295,18 @@ panelElements.adjList.addEventListener('keydown', (e) => {
                 return true;
             });
             labels.forEach(label => {
-                const targetNode = nodesArr.find(n => n.label === label);
-                if (targetNode) {
-                    graph.addEdge(sourceId, targetNode.id, graph.directedEdges);
+                // Handle weighted format in adj list if present: label(weight)
+                const match = label.match(/^([^(]+)(?:\(([^)]+)\))?$/);
+                if (match) {
+                    const nodeLabel = match[1].trim();
+                    const weightStr = match[2];
+                    const targetNode = nodesArr.find(n => n.label === nodeLabel);
+                    if (targetNode) {
+                        const edge = graph.addEdge(sourceId, targetNode.id, graph.directedEdges);
+                        if (edge && weightStr !== undefined) {
+                            graph.updateEdgeLabel(edge, weightStr);
+                        }
+                    }
                 }
             });
 
@@ -214,6 +332,9 @@ buttons.nodeNameInput.addEventListener('input', (e) => {
         graph.updateNodeLabel(graph.selectedElement.data.id, val);
     }
 });
+buttons.graphType.addEventListener('change', (e) => {
+    graph.setWeighted(e.target.value === 'weighted');
+});
 graph.onSelectionChange = (selection) => {
     if (selection && selection.type === 'node') {
         buttons.nodeNameInput.value = selection.data.label;
@@ -222,7 +343,7 @@ graph.onSelectionChange = (selection) => {
     }
 };
 window.addEventListener('keydown', (e) => {
-    if (document.activeElement.tagName === 'INPUT') return;
+    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
     if (e.key === 's' || e.key === 'S') buttons.select.click();
     if (e.key === 'n' || e.key === 'N') buttons.addNode.click();
     if (e.key === 'e' || e.key === 'E') buttons.addEdge.click();

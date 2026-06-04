@@ -55,6 +55,14 @@
                 </div>
                 <div class="separator"></div>
                 <div class="toolbar-control">
+                    <label>Graph Type</label>
+                    <select id="select-graph-type" style="width: 100px; padding: 4px; border-radius: 4px; border: 1px solid #e2e8f0; font-size: 11px;">
+                        <option value="unweighted">Unweighted</option>
+                        <option value="weighted">Weighted</option>
+                    </select>
+                </div>
+                <div class="separator"></div>
+                <div class="toolbar-control">
                     <label>Node Size</label>
                     <div class="slider-wrapper">
                         <span id="val-node-size" class="slider-value">15</span>
@@ -78,27 +86,34 @@
                     <span>Clear</span>
                 </button>
                 <div class="separator"></div>
-                <button id="btn-undo" title="Undo (Ctrl+Z)">
-                    <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
-                    <span>Undo</span>
-                </button>
-                <button id="btn-redo" title="Redo (Ctrl+Y)">
-                    <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
-                    <span>Redo</span>
-                </button>
-                <div class="separator"></div>
-                <button id="btn-export" title="Export JSON">
-                    <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                    <span>Export</span>
-                </button>
-                <button id="btn-import" title="Import JSON">
-                    <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
-                    <span>Import</span>
-                </button>
-                <button id="btn-download" title="Download Graph (PNG)">
-                    <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M5 20h14v-2H5v2zm14-9h-4V3H9v8H5l7 7 7-7z"/></svg>
-                    <span>Download</span>
-                </button>
+                <div class="dropdown-container">
+                    <button id="btn-more" title="More Options">
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                        <span>More</span>
+                    </button>
+                    <div id="more-options-menu" class="dropdown-menu">
+                        <button id="btn-undo" title="Undo (Ctrl+Z)">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+                            <span>Undo</span>
+                        </button>
+                        <button id="btn-redo" title="Redo (Ctrl+Y)">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+                            <span>Redo</span>
+                        </button>
+                        <button id="btn-export" title="Export JSON">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                            <span>Export</span>
+                        </button>
+                        <button id="btn-import" title="Import JSON">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+                            <span>Import</span>
+                        </button>
+                        <button id="btn-download" title="Download Graph (PNG)">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M5 20h14v-2H5v2zm14-9h-4V3H9v8H5l7 7 7-7z"/></svg>
+                            <span>Download</span>
+                        </button>
+                    </div>
+                </div>
                 <input type="file" id="input-import" accept=".json" style="display: none;">
             </div>
             <svg id="graph-container">

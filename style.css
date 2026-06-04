@@ -442,6 +442,69 @@ html {
     font-weight: 700;
 }
 
+.edge-label-group {
+    pointer-events: all;
+    cursor: text;
+}
+
+.edge-label-bg {
+    fill: white;
+    fill-opacity: 0.8;
+}
+
+.edge-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-anchor: middle;
+    fill: var(--text-color);
+    user-select: none;
+    pointer-events: none;
+}
+
+.edge-label-group:hover .edge-label-bg {
+    fill-opacity: 1;
+    stroke: var(--primary-color);
+    stroke-width: 1px;
+}
+
+.dropdown-container {
+    position: relative;
+    display: flex;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    display: none;
+    flex-direction: column;
+    padding: 8px;
+    gap: 4px;
+    z-index: 1000;
+    min-width: 120px;
+}
+
+.dropdown-menu.show {
+    display: flex;
+}
+
+.dropdown-menu button {
+    width: 100% !important;
+    height: 40px !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    padding: 0 12px !important;
+    gap: 12px !important;
+}
+
+.dropdown-menu button span {
+    font-size: 13px !important;
+}
+
 .mode-addNode #graph-container {
     cursor: crosshair;
 }
