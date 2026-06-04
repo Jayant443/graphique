@@ -107,6 +107,7 @@ html {
     width: 100%;
     box-sizing: border-box;
     overflow-x: auto;
+    overflow-y: hidden;
 }
 
 .panel-card::-webkit-scrollbar {
@@ -172,7 +173,7 @@ html {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 11px;
     border-collapse: collapse;
-    width: auto;
+    width: max-content;
     min-width: 100%;
 }
 
