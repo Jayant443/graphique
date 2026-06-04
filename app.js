@@ -264,7 +264,10 @@ panelElements.adjMatrix.addEventListener('focusout', (e) => {
         if (val === '0' || isNaN(weight)) {
             graph.removeEdge(sourceId, targetId);
         } else {
-            let edge = graph.edges.find(e => e.source.id === sourceId && e.target.id === targetId);
+            let edge = graph.edges.find(e => 
+                (e.source.id === sourceId && e.target.id === targetId) ||
+                (!graph.directedEdges && e.source.id === targetId && e.target.id === sourceId)
+            );
             if (!edge) {
                 edge = graph.addEdge(sourceId, targetId, graph.directedEdges);
             }
@@ -292,31 +295,34 @@ panelElements.adjList.addEventListener('keydown', (e) => {
             const sourceId = item.dataset.sourceId;
             const text = e.target.textContent.trim();
             const labels = text.split(',').map(l => l.trim()).filter(l => l.length > 0);
-            const nodesArr = Array.from(graph.nodes.values());
-            graph.edges = graph.edges.filter(edge => {
-                if (edge.source.id === sourceId) {
-                    edge.group.remove();
-                    return false;
-                }
-                return true;
-            });
-            labels.forEach(label => {
-                const match = label.match(/^([^(]+)(?:\(([^)]+)\))?$/);
-                if (match) {
-                    const nodeLabel = match[1].trim();
-                    const weightStr = match[2];
-                    const targetNode = nodesArr.find(n => n.label === nodeLabel);
-                    if (targetNode) {
-                        const edge = graph.addEdge(sourceId, targetNode.id, graph.directedEdges);
-                        if (edge && weightStr !== undefined) {
-                            graph.updateEdgeLabel(edge, weightStr);
+            
+            graph.batchUpdate(() => {
+                const isDirected = graph.directedEdges;
+                graph.edges = graph.edges.filter(edge => {
+                    const isMatch = edge.source.id === sourceId || (!isDirected && edge.target.id === sourceId);
+                    if (isMatch) {
+                        edge.group.remove();
+                        return false;
+                    }
+                    return true;
+                });
+
+                const nodesArr = Array.from(graph.nodes.values());
+                labels.forEach(label => {
+                    const match = label.match(/^([^(]+)(?:\(([^)]+)\))?$/);
+                    if (match) {
+                        const nodeLabel = match[1].trim();
+                        const weightStr = match[2];
+                        const targetNode = nodesArr.find(n => n.label === nodeLabel);
+                        if (targetNode) {
+                            const edge = graph.addEdge(sourceId, targetNode.id, graph.directedEdges);
+                            if (edge && weightStr !== undefined) {
+                                graph.updateEdgeLabel(edge, weightStr);
+                            }
                         }
                     }
-                }
+                });
             });
-
-            graph.notifyUpdate();
-            graph.wake();
             e.target.blur();
         }
     } else if (e.key === 'Escape') {
