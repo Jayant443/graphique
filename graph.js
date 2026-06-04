@@ -9,7 +9,7 @@ class Graph {
         this.mode = 'select';
         this.selectedElement = null;
         this.edgeSourceNode = null;
-        this.directedEdges = true;
+        this.directedEdges = false;
         this.nextNodeName = "";
         this.transform = { x: 0, y: 0, k: 1 };
         this.repulsion = 400;
@@ -20,9 +20,91 @@ class Graph {
         this.energyThreshold = 0.01;
         this.onSelectionChange = null;
         this.onGraphUpdate = null;
+        this.undoStack = [];
+        this.redoStack = [];
+        this.isRestoring = false;
         this.initInteractions();
         this.animate();
         this.updateModeUI();
+    }
+
+    serialize() {
+        return {
+            nodes: Array.from(this.nodes.values()).map(n => ({
+                id: n.id,
+                label: n.label,
+                x: n.x,
+                y: n.y
+            })),
+            edges: this.edges.map(e => ({
+                sourceId: e.source.id,
+                targetId: e.target.id,
+                isDirected: e.isDirected
+            })),
+            settings: {
+                transform: this.transform,
+                physics: {
+                    repulsion: this.repulsion,
+                    attraction: this.attraction,
+                    edgeLength: this.edgeLength,
+                    damping: this.damping
+                },
+                directedEdges: this.directedEdges,
+                nextNodeName: this.nextNodeName
+            }
+        };
+    }
+
+    deserialize(state) {
+        this.isRestoring = true;
+        this.clear();
+        
+        if (state.settings) {
+            if (state.settings.transform) {
+                this.transform = state.settings.transform;
+                this.updateViewport();
+            }
+            if (state.settings.physics) {
+                this.repulsion = state.settings.physics.repulsion ?? this.repulsion;
+                this.attraction = state.settings.physics.attraction ?? this.attraction;
+                this.edgeLength = state.settings.physics.edgeLength ?? this.edgeLength;
+                this.damping = state.settings.physics.damping ?? this.damping;
+            }
+            this.directedEdges = state.settings.directedEdges ?? this.directedEdges;
+            this.nextNodeName = state.settings.nextNodeName ?? this.nextNodeName;
+        }
+
+        state.nodes.forEach(n => this.addNode(n.id, n.label, n.x, n.y));
+        state.edges.forEach(e => this.addEdge(e.sourceId, e.targetId, e.isDirected));
+        
+        this.isRestoring = false;
+        this.wake();
+        this.notifyUpdate();
+    }
+
+    saveState() {
+        if (this.isRestoring) return;
+        const state = JSON.stringify(this.serialize());
+        if (this.undoStack.length > 0 && this.undoStack[this.undoStack.length - 1] === state) return;
+        this.undoStack.push(state);
+        this.redoStack = [];
+        if (this.undoStack.length > 50) this.undoStack.shift();
+    }
+
+    undo() {
+        if (this.undoStack.length === 0) return;
+        const currentState = JSON.stringify(this.serialize());
+        this.redoStack.push(currentState);
+        const prevState = JSON.parse(this.undoStack.pop());
+        this.deserialize(prevState);
+    }
+
+    redo() {
+        if (this.redoStack.length === 0) return;
+        const currentState = JSON.stringify(this.serialize());
+        this.undoStack.push(currentState);
+        const nextState = JSON.parse(this.redoStack.pop());
+        this.deserialize(nextState);
     }
 
     notifyUpdate() {
@@ -146,6 +228,7 @@ class Graph {
 
     addNode(id, label, x, y) {
         if (this.nodes.has(id)) return;
+        this.saveState();
         const node = {
             id,
             label: label || id,
@@ -184,6 +267,7 @@ class Graph {
     }
 
     addEdge(sourceId, targetId, isDirected = false) {
+        this.saveState();
         const source = this.nodes.get(sourceId);
         const target = this.nodes.get(targetId);
         if (!source || !target || source === target) return;
@@ -230,6 +314,7 @@ class Graph {
     }
 
     updateNodeLabel(id, newLabel) {
+        this.saveState();
         const node = this.nodes.get(id);
         if (node) {
             node.label = newLabel;
@@ -301,7 +386,10 @@ class Graph {
             }
         });
         const stop = () => {
-            if (draggedNode) draggedNode.fxed = false;
+            if (draggedNode) {
+                draggedNode.fxed = false;
+                this.saveState();
+            }
             draggedNode = null;
             isPanning = false;
         };
@@ -445,6 +533,7 @@ class Graph {
     }
 
     removeNode(id) {
+        this.saveState();
         const node = this.nodes.get(id);
         if (!node) return;
         this.edges = this.edges.filter(edge => {
@@ -460,6 +549,7 @@ class Graph {
     }
 
     removeEdge(sourceId, targetId) {
+        this.saveState();
         this.edges = this.edges.filter(edge => {
             if (edge.source.id === sourceId && edge.target.id === targetId) {
                 edge.group.remove();
@@ -471,6 +561,7 @@ class Graph {
     }
 
     clear() {
+        if (!this.isRestoring) this.saveState();
         this.nodes.forEach(node => node.element.remove());
         this.edges.forEach(edge => edge.group.remove());
         this.nodes.clear();

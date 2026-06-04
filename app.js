@@ -5,6 +5,12 @@ const buttons = {
     addEdge: document.getElementById('btn-add-edge'),
     delete: document.getElementById('btn-delete'),
     clear: document.getElementById('btn-clear'),
+    undo: document.getElementById('btn-undo'),
+    redo: document.getElementById('btn-redo'),
+    export: document.getElementById('btn-export'),
+    import: document.getElementById('btn-import'),
+    importInput: document.getElementById('input-import'),
+    download: document.getElementById('btn-download'),
     nodeSize: document.getElementById('slider-node-size'),
     nodeSizeVal: document.getElementById('val-node-size'),
     edgeLength: document.getElementById('slider-edge-length'),
@@ -39,6 +45,78 @@ buttons.clear.addEventListener('click', () => {
         graph.clear();
     }
 });
+buttons.undo.addEventListener('click', () => graph.undo());
+buttons.redo.addEventListener('click', () => graph.redo());
+
+// Export JSON
+buttons.export.addEventListener('click', () => {
+    const data = JSON.stringify(graph.serialize(), null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `graph-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+// Import JSON
+buttons.import.addEventListener('click', () => buttons.importInput.click());
+buttons.importInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const data = JSON.parse(event.target.result);
+            graph.deserialize(data);
+            
+            // Sync UI settings
+            if (data.settings) {
+                if (data.settings.physics) {
+                    buttons.edgeLength.value = data.settings.physics.edgeLength;
+                    buttons.edgeLengthVal.textContent = data.settings.physics.edgeLength;
+                }
+                buttons.directed.checked = data.settings.directedEdges;
+                buttons.nodeNameInput.value = data.settings.nextNodeName || "";
+            }
+        } catch (err) {
+            alert('Error importing graph: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+});
+
+// Download PNG
+buttons.download.addEventListener('click', () => {
+    const svg = document.getElementById('graph-container');
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    // Set canvas size
+    canvas.width = svg.clientWidth * 2; // High DPI
+    canvas.height = svg.clientHeight * 2;
+    
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    img.onload = () => {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const pngUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = pngUrl;
+        a.download = `graph-${Date.now()}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+    img.src = url;
+});
+
 buttons.nodeSize.addEventListener('input', (e) => {
     graph.setVisualScale('node-radius', e.target.value);
     buttons.nodeSizeVal.textContent = e.target.value;
@@ -149,6 +227,16 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'n' || e.key === 'N') buttons.addNode.click();
     if (e.key === 'e' || e.key === 'E') buttons.addEdge.click();
     if (e.key === 'Delete' || e.key === 'Backspace') graph.deleteSelected();
+
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        if (e.shiftKey) graph.redo();
+        else graph.undo();
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) {
+        e.preventDefault();
+        graph.redo();
+    }
 });
 const svgWidth = 1000;
 const svgHeight = 600;
