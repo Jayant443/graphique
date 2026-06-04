@@ -28,7 +28,6 @@ class Graph {
         this.nodeCounter = 1;
         this.initInteractions();
         this.animate();
-        this.updateModeUI();
     }
 
     serialize() {
@@ -268,15 +267,6 @@ class Graph {
         this.mode = mode;
         this.edgeSourceNode = null;
         this.deselectAll();
-        this.updateModeUI();
-    }
-
-    updateModeUI() {
-        document.body.className = `mode-${this.mode}`;
-        const modeDisplay = document.getElementById('current-mode');
-        if (modeDisplay) {
-            modeDisplay.textContent = this.mode.charAt(0).toUpperCase() + this.mode.slice(1);
-        }
     }
 
     setVisualScale(property, value) {
