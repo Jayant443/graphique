@@ -325,11 +325,7 @@ class Graph {
         const source = this.nodes.get(sourceId);
         const target = this.nodes.get(targetId);
         if (!source || !target || source === target) return;
-        const exists = this.edges.some(e =>
-            (e.source === source && e.target === target) ||
-            (!isDirected && e.source === target && e.target === source)
-        );
-        if (exists) return;
+
         const edge = {
             source,
             target,
@@ -352,12 +348,12 @@ class Graph {
     createEdgeElement(edge) {
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         g.setAttribute("class", "edge-group");
-        const hitArea = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        const hitArea = document.createElementNS("http://www.w3.org/2000/svg", "path");
         hitArea.setAttribute("class", "edge-hit-area");
-        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        line.setAttribute("class", `edge ${edge.isDirected ? 'directed' : ''}`);
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("class", `edge ${edge.isDirected ? 'directed' : ''}`);
         g.appendChild(hitArea);
-        g.appendChild(line);
+        g.appendChild(path);
 
         const lg = document.createElementNS("http://www.w3.org/2000/svg", "g");
         lg.setAttribute("class", "edge-label-group");
@@ -373,7 +369,7 @@ class Graph {
         g.appendChild(lg);
 
         this.edgesLayer.appendChild(g);
-        edge.element = line;
+        edge.element = path;
         edge.hitArea = hitArea;
         edge.group = g;
         edge.labelGroup = lg;
@@ -560,12 +556,23 @@ class Graph {
         if (this.selectedElement.type === 'node') {
             this.removeNode(this.selectedElement.data.id);
         } else if (this.selectedElement.type === 'edge') {
-            const edge = this.selectedElement.data;
-            this.removeEdge(edge.source.id, edge.target.id);
+            this.removeEdgeObject(this.selectedElement.data);
         }
         this.selectedElement = null;
         if (this.onSelectionChange) this.onSelectionChange(null);
         this.wake();
+        this.notifyUpdate();
+    }
+
+    removeEdgeObject(edge) {
+        this.saveState();
+        this.edges = this.edges.filter(e => {
+            if (e === edge) {
+                if (e.group) e.group.remove();
+                return false;
+            }
+            return true;
+        });
         this.notifyUpdate();
     }
 
@@ -587,16 +594,59 @@ class Graph {
 
     updateEdgePosition(edge) {
         if (!edge.element || !edge.hitArea) return;
-        [edge.element, edge.hitArea].forEach(el => {
-            el.setAttribute("x1", edge.source.x);
-            el.setAttribute("y1", edge.source.y);
-            el.setAttribute("x2", edge.target.x);
-            el.setAttribute("y2", edge.target.y);
-        });
+
+        const source = edge.source;
+        const target = edge.target;
+
+        // Consistent ordering for sibling detection and offset calculation
+        const node1 = source.id < target.id ? source : target;
+        const node2 = source.id < target.id ? target : source;
+
+        const siblings = this.edges.filter(e =>
+            (e.source === node1 && e.target === node2) ||
+            (e.source === node2 && e.target === node1)
+        );
+
+        const count = siblings.length;
+        const index = siblings.indexOf(edge);
+
+        let d;
+        let midX = (source.x + target.x) / 2;
+        let midY = (source.y + target.y) / 2;
+
+        if (count === 1) {
+            d = `M ${source.x} ${source.y} L ${target.x} ${target.y}`;
+        } else {
+            // Calculate normal vector based on consistent node ordering
+            const dx = node2.x - node1.x;
+            const dy = node2.y - node1.y;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+
+            const px = -dy / len;
+            const py = dx / len;
+
+            const step = 30;
+            const offset = (index - (count - 1) / 2) * step;
+
+            // Base midpoint between the two nodes
+            const bmx = (node1.x + node2.x) / 2;
+            const bmy = (node1.y + node2.y) / 2;
+
+            const cx = bmx + px * offset;
+            const cy = bmy + py * offset;
+
+            d = `M ${source.x} ${source.y} Q ${cx} ${cy} ${target.x} ${target.y}`;
+
+            // Actual midpoint of the quadratic Bezier for label positioning
+            midX = 0.25 * source.x + 0.5 * cx + 0.25 * target.x;
+            midY = 0.25 * source.y + 0.5 * cy + 0.25 * target.y;
+        }
+
+        edge.element.setAttribute("d", d);
+        edge.hitArea.setAttribute("d", d);
+
         if (edge.labelGroup) {
-            const mx = (edge.source.x + edge.target.x) / 2;
-            const my = (edge.source.y + edge.target.y) / 2;
-            edge.labelGroup.setAttribute("transform", `translate(${mx}, ${my})`);
+            edge.labelGroup.setAttribute("transform", `translate(${midX}, ${midY})`);
             this.updateEdgeLabelElement(edge);
         }
     }
