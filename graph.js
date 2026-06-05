@@ -1,3 +1,323 @@
+class GraphNode {
+    constructor(id, label, x, y) {
+        this.id = id;
+        this.label = label || id;
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.fxed = false;
+        this.element = null;
+        this.circle = null;
+    }
+
+    createDOM(parentLayer) {
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("class", "node-group");
+        
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("class", "node");
+        circle.setAttribute("r", "15");
+        circle.dataset.id = this.id;
+        
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("class", "node-label");
+        text.setAttribute("dy", "5");
+        text.textContent = this.label;
+        
+        g.appendChild(circle);
+        g.appendChild(text);
+        parentLayer.appendChild(g);
+        
+        this.element = g;
+        this.circle = circle;
+        this.updatePosition();
+    }
+
+    updatePosition() {
+        if (this.element) {
+            this.element.setAttribute("transform", `translate(${this.x}, ${this.y})`);
+        }
+    }
+
+    updateLabel(newLabel) {
+        this.label = newLabel;
+        if (this.element) {
+            const textElement = this.element.querySelector('.node-label');
+            if (textElement) textElement.textContent = newLabel;
+        }
+    }
+
+    remove() {
+        if (this.element) this.element.remove();
+    }
+
+    serialize() {
+        return {
+            id: this.id,
+            label: this.label,
+            x: this.x,
+            y: this.y
+        };
+    }
+}
+
+class GraphEdge {
+    constructor(source, target, isDirected = false) {
+        this.source = source;
+        this.target = target;
+        this.isDirected = isDirected;
+        this.weight = 1;
+        this.label = "1";
+        this.element = null;
+        this.hitArea = null;
+        this.group = null;
+        this.labelGroup = null;
+        this.labelText = null;
+    }
+
+    createDOM(parentLayer, isWeighted) {
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("class", "edge-group");
+        
+        const hitArea = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        hitArea.setAttribute("class", "edge-hit-area");
+        
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("class", `edge ${this.isDirected ? 'directed' : ''}`);
+        if (this.isDirected) path.setAttribute('marker-end', 'url(#arrowhead)');
+
+        g.appendChild(hitArea);
+        g.appendChild(path);
+
+        const lg = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        lg.setAttribute("class", "edge-label-group");
+        lg.style.display = isWeighted ? 'block' : 'none';
+        
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("class", "edge-label-bg");
+        rect.setAttribute("rx", "4");
+        
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("class", "edge-label");
+        text.textContent = this.label;
+        
+        lg.appendChild(rect);
+        lg.appendChild(text);
+        g.appendChild(lg);
+
+        parentLayer.appendChild(g);
+        
+        this.element = path;
+        this.hitArea = hitArea;
+        this.group = g;
+        this.labelGroup = lg;
+        this.labelText = text;
+        
+        this.updateLabelElement();
+    }
+
+    updatePosition(siblings) {
+        if (!this.element) return;
+
+        const count = siblings.length;
+        const index = siblings.indexOf(this);
+
+        let d;
+        let midX = (this.source.x + this.target.x) / 2;
+        let midY = (this.source.y + this.target.y) / 2;
+
+        if (count === 1) {
+            d = `M ${this.source.x} ${this.source.y} L ${this.target.x} ${this.target.y}`;
+        } else {
+            const node1 = this.source.id < this.target.id ? this.source : this.target;
+            const node2 = this.source.id < this.target.id ? this.target : this.source;
+
+            const dx = node2.x - node1.x;
+            const dy = node2.y - node1.y;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const px = -dy / len;
+            const py = dx / len;
+
+            const step = 30;
+            const offset = (index - (count - 1) / 2) * step;
+            const bmx = (node1.x + node2.x) / 2;
+            const bmy = (node1.y + node2.y) / 2;
+
+            const cx = bmx + px * offset;
+            const cy = bmy + py * offset;
+
+            d = `M ${this.source.x} ${this.source.y} Q ${cx} ${cy} ${this.target.x} ${this.target.y}`;
+            
+            midX = 0.25 * this.source.x + 0.5 * cx + 0.25 * this.target.x;
+            midY = 0.25 * this.source.y + 0.5 * cy + 0.25 * this.target.y;
+        }
+
+        this.element.setAttribute("d", d);
+        this.hitArea.setAttribute("d", d);
+
+        if (this.labelGroup) {
+            this.labelGroup.setAttribute("transform", `translate(${midX}, ${midY})`);
+            this.updateLabelElement();
+        }
+    }
+
+    updateLabel(newVal) {
+        this.label = newVal;
+        const numericWeight = parseFloat(newVal);
+        if (!isNaN(numericWeight)) this.weight = numericWeight;
+        this.updateLabelElement();
+    }
+
+    updateLabelElement() {
+        if (this.labelText) {
+            this.labelText.textContent = this.label;
+            try {
+                const bbox = this.labelText.getBBox();
+                const rect = this.labelGroup.querySelector('.edge-label-bg');
+                if (rect) {
+                    rect.setAttribute("x", bbox.x - 4);
+                    rect.setAttribute("y", bbox.y - 2);
+                    rect.setAttribute("width", bbox.width + 8);
+                    rect.setAttribute("height", bbox.height + 4);
+                }
+            } catch (e) {}
+        }
+    }
+
+    setDirected(isDirected) {
+        this.isDirected = isDirected;
+        if (this.element) {
+            this.element.classList.toggle('directed', isDirected);
+            if (isDirected) {
+                this.element.setAttribute('marker-end', 'url(#arrowhead)');
+            } else {
+                this.element.removeAttribute('marker-end');
+            }
+        }
+    }
+
+    remove() {
+        if (this.group) this.group.remove();
+    }
+
+    serialize() {
+        return {
+            sourceId: this.source.id,
+            targetId: this.target.id,
+            isDirected: this.isDirected,
+            weight: this.weight,
+            label: this.label
+        };
+    }
+}
+
+class GraphLogic {
+    static getAdjacencyList(nodes, edges) {
+        const adjList = new Map();
+        nodes.forEach(n => adjList.set(n.id, []));
+        edges.forEach(e => {
+            adjList.get(e.source.id).push({ id: e.target.id, weight: e.weight });
+            if (!e.isDirected) {
+                adjList.get(e.target.id).push({ id: e.source.id, weight: e.weight });
+            }
+        });
+        return adjList;
+    }
+
+    static hasCycle(nodes, edges, isDirectedMode) {
+        const adjList = this.getAdjacencyList(nodes, edges);
+        const visited = new Set();
+        const recStack = new Set();
+
+        const checkCycleDirected = (nodeId) => {
+            if (recStack.has(nodeId)) return true;
+            if (visited.has(nodeId)) return false;
+            visited.add(nodeId);
+            recStack.add(nodeId);
+            const neighbors = adjList.get(nodeId);
+            for (const neighbor of neighbors) {
+                if (checkCycleDirected(neighbor.id)) return true;
+            }
+            recStack.delete(nodeId);
+            return false;
+        };
+
+        const checkCycleUndirected = (nodeId, parentId) => {
+            visited.add(nodeId);
+            const neighbors = adjList.get(nodeId);
+            for (const neighbor of neighbors) {
+                if (!visited.has(neighbor.id)) {
+                    if (checkCycleUndirected(neighbor.id, nodeId)) return true;
+                } else if (neighbor.id !== parentId) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        if (isDirectedMode) {
+            for (const node of nodes) {
+                if (!visited.has(node.id)) {
+                    if (checkCycleDirected(node.id)) return true;
+                }
+            }
+        } else {
+            for (const node of nodes) {
+                if (!visited.has(node.id)) {
+                    if (checkCycleUndirected(node.id, null)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    static analyzeTree(nodes, edges, isDirectedMode) {
+        if (nodes.length === 0) return { isTree: false };
+        const adjList = this.getAdjacencyList(nodes, edges);
+        const visited = new Set();
+        const queue = [nodes[0].id];
+        visited.add(nodes[0].id);
+
+        let head = 0;
+        while (head < queue.length) {
+            const id = queue[head++];
+            const neighbors = adjList.get(id) || [];
+            for (const neighbor of neighbors) {
+                if (!visited.has(neighbor.id)) {
+                    visited.add(neighbor.id);
+                    queue.push(neighbor.id);
+                }
+            }
+        }
+        
+        const isConnected = visited.size === nodes.length;
+        const isTree = isConnected && 
+                       edges.length === nodes.length - 1 && 
+                       !this.hasCycle(nodes, edges, isDirectedMode);
+
+        if (!isTree) return { isTree: false };
+
+        let root = nodes[0];
+        if (isDirectedMode) {
+            const inDegrees = new Map();
+            nodes.forEach(n => inDegrees.set(n.id, 0));
+            edges.forEach(e => inDegrees.set(e.target.id, inDegrees.get(e.target.id) + 1));
+            root = nodes.find(n => inDegrees.get(n.id) === 0) || nodes[0];
+        }
+
+        const leaves = [];
+        const childrenMap = new Map();
+        nodes.forEach(node => {
+            const outEdges = edges.filter(e => e.source.id === node.id).map(e => e.target.id);
+            childrenMap.set(node.id, outEdges);
+            if (outEdges.length === 0) leaves.push(node);
+        });
+
+        return { isTree: true, root, leaves, childrenMap };
+    }
+}
+
 class Graph {
     constructor(containerId) {
         this.svg = document.getElementById(containerId);
@@ -24,28 +344,115 @@ class Graph {
         this.redoStack = [];
         this.isRestoring = false;
         this.isWeighted = false;
-        this.algoController = null;
         this.nodeCounter = 1;
         this.algorithms = new GraphAlgorithms(this);
         this.initInteractions();
         this.animate();
     }
 
+    addNode(id, label, x, y) {
+        if (this.nodes.has(id)) return;
+        this.saveState();
+        const node = new GraphNode(id, label, x, y);
+        node.createDOM(this.nodesLayer);
+        this.nodes.set(id, node);
+        this.wake();
+        this.notifyUpdate();
+        return node;
+    }
+
+    removeNode(id) {
+        this.saveState();
+        const node = this.nodes.get(id);
+        if (!node) return;
+        
+        this.edges = this.edges.filter(edge => {
+            if (edge.source === node || edge.target === node) {
+                edge.remove();
+                return false;
+            }
+            return true;
+        });
+        
+        node.remove();
+        this.nodes.delete(id);
+        this.notifyUpdate();
+    }
+
+    addEdge(sourceId, targetId, isDirected = false) {
+        this.saveState();
+        const source = this.nodes.get(sourceId);
+        const target = this.nodes.get(targetId);
+        if (!source || !target || source === target) return;
+
+        const edge = new GraphEdge(source, target, isDirected);
+        edge.createDOM(this.edgesLayer, this.isWeighted);
+        
+        edge.group.addEventListener('pointerdown', (e) => {
+            if (this.mode === 'select') {
+                e.stopPropagation();
+                this.selectEdge(edge);
+            }
+        });
+
+        edge.labelGroup.addEventListener('pointerdown', (e) => {
+            if (this.mode === 'select') {
+                e.stopPropagation();
+                const newVal = prompt("Enter edge weight:", edge.label);
+                if (newVal !== null) {
+                    this.updateEdgeLabel(edge, newVal);
+                }
+            }
+        });
+
+        this.edges.push(edge);
+        this.wake();
+        this.notifyUpdate();
+        return edge;
+    }
+
+    removeEdge(sourceId, targetId) {
+        this.saveState();
+        this.edges = this.edges.filter(edge => {
+            const match = (edge.source.id === sourceId && edge.target.id === targetId) ||
+                        (!edge.isDirected && edge.source.id === targetId && edge.target.id === sourceId);
+            if (match) {
+                edge.remove();
+                return false;
+            }
+            return true;
+        });
+        this.notifyUpdate();
+    }
+
+    removeEdgeObject(edge) {
+        this.saveState();
+        this.edges = this.edges.filter(e => {
+            if (e === edge) {
+                e.remove();
+                return false;
+            }
+            return true;
+        });
+        this.notifyUpdate();
+    }
+
+    clear() {
+        if (!this.isRestoring) this.saveState();
+        this.nodes.forEach(node => node.remove());
+        this.edges.forEach(edge => edge.remove());
+        this.nodes.clear();
+        this.edges = [];
+        this.nodeCounter = 1;
+        this.selectedElement = null;
+        this.wake();
+        this.notifyUpdate();
+    }
+
     serialize() {
         return {
-            nodes: Array.from(this.nodes.values()).map(n => ({
-                id: n.id,
-                label: n.label,
-                x: n.x,
-                y: n.y
-            })),
-            edges: this.edges.map(e => ({
-                sourceId: e.source.id,
-                targetId: e.target.id,
-                isDirected: e.isDirected,
-                weight: e.weight || 1,
-                label: e.label || "1"
-            })),
+            nodes: Array.from(this.nodes.values()).map(n => n.serialize()),
+            edges: this.edges.map(e => e.serialize()),
             settings: {
                 transform: this.transform,
                 physics: {
@@ -64,7 +471,6 @@ class Graph {
     deserialize(state) {
         this.isRestoring = true;
         this.clear();
-
         if (state.settings) {
             if (state.settings.transform) {
                 this.transform = state.settings.transform;
@@ -80,17 +486,15 @@ class Graph {
             this.nextNodeName = state.settings.nextNodeName ?? this.nextNodeName;
             this.isWeighted = state.settings.isWeighted ?? this.isWeighted;
         }
-
         state.nodes.forEach(n => this.addNode(n.id, n.label, n.x, n.y));
         state.edges.forEach(e => {
             const edge = this.addEdge(e.sourceId, e.targetId, e.isDirected);
             if (edge) {
                 edge.weight = e.weight || 1;
                 edge.label = e.label || "1";
-                this.updateEdgeLabelElement(edge);
+                edge.updateLabelElement();
             }
         });
-
         this.isRestoring = false;
         this.wake();
         this.notifyUpdate();
@@ -99,7 +503,7 @@ class Graph {
     saveState() {
         if (this.isRestoring) return;
         const state = JSON.stringify(this.serialize());
-        if (this.undoStack.length > 0 && this.undoStack[this.undoStack.length - 1] === state) return;
+        if (this.undoStack.length > 0 && this.undoStack[this.undoStack.length-1] === state) return;
         this.undoStack.push(state);
         this.redoStack = [];
         if (this.undoStack.length > 50) this.undoStack.shift();
@@ -129,129 +533,9 @@ class Graph {
 
     getGraphData() {
         const nodesArr = Array.from(this.nodes.values());
-        const adjList = new Map();
-        nodesArr.forEach(n => adjList.set(n.id, []));
-        this.edges.forEach(e => {
-            adjList.get(e.source.id).push({ id: e.target.id, weight: e.weight });
-            if (!e.isDirected) {
-                adjList.get(e.target.id).push({ id: e.source.id, weight: e.weight });
-            }
-        });
-
-        const treeInfo = this.analyzeTree(nodesArr, adjList);
-
-        return {
-            nodes: nodesArr,
-            edges: this.edges,
-            adjList,
-            treeInfo
-        };
-    }
-
-    hasCycle(nodes, adjList) {
-        const visited = new Set();
-        const recStack = new Set();
-
-        const checkCycleDirected = (nodeId) => {
-            if (recStack.has(nodeId)) return true;
-            if (visited.has(nodeId)) return false;
-
-            visited.add(nodeId);
-            recStack.add(nodeId);
-
-            const neighbors = adjList.get(nodeId);
-            for (const neighbor of neighbors) {
-                if (checkCycleDirected(neighbor.id)) return true;
-            }
-
-            recStack.delete(nodeId);
-            return false;
-        };
-
-        const checkCycleUndirected = (nodeId, parentId) => {
-            visited.add(nodeId);
-            const neighbors = adjList.get(nodeId);
-            for (const neighbor of neighbors) {
-                if (!visited.has(neighbor.id)) {
-                    if (checkCycleUndirected(neighbor.id, nodeId)) return true;
-                } else if (neighbor.id !== parentId) {
-                    return true;
-                }
-            }
-            return false;
-        };
-
-        if (this.directedEdges) {
-            for (const node of nodes) {
-                if (!visited.has(node.id)) {
-                    if (checkCycleDirected(node.id)) return true;
-                }
-            }
-        } else {
-            for (const node of nodes) {
-                if (!visited.has(node.id)) {
-                    if (checkCycleUndirected(node.id, null)) return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    analyzeTree(nodes, adjList) {
-        if (nodes.length === 0) return { isTree: false };
-        const visited = new Set();
-        const queue = [nodes[0].id];
-        visited.add(nodes[0].id);
-
-        let head = 0;
-        while (head < queue.length) {
-            const id = queue[head++];
-            const neighbors = adjList.get(id) || [];
-            for (const neighbor of neighbors) {
-                if (!visited.has(neighbor.id)) {
-                    visited.add(neighbor.id);
-                    queue.push(neighbor.id);
-                }
-            }
-        }
-        const isConnected = visited.size === nodes.length;
-
-        const isTree = isConnected &&
-            this.edges.length === nodes.length - 1 &&
-            !this.hasCycle(nodes, adjList);
-
-        if (!isTree) return { isTree: false };
-
-        let root = nodes[0];
-        if (this.directedEdges) {
-            const inDegrees = new Map();
-            nodes.forEach(n => inDegrees.set(n.id, 0));
-            this.edges.forEach(e => inDegrees.set(e.target.id, inDegrees.get(e.target.id) + 1));
-            root = nodes.find(n => inDegrees.get(n.id) === 0) || nodes[0];
-        }
-
-        const leaves = [];
-        const childrenMap = new Map();
-
-        nodes.forEach(node => {
-            const outEdges = this.edges.filter(e => e.source.id === node.id).map(e => e.target.id);
-            childrenMap.set(node.id, outEdges);
-            if (outEdges.length === 0) leaves.push(node);
-        });
-
-        return {
-            isTree: true,
-            root,
-            leaves,
-            childrenMap
-        };
-    }
-
-    wake() {
-        if (this.isSleeping) {
-            this.isSleeping = false;
-            this.animate();
-        }
+        const adjList = GraphLogic.getAdjacencyList(nodesArr, this.edges);
+        const treeInfo = GraphLogic.analyzeTree(nodesArr, this.edges, this.directedEdges);
+        return { nodes: nodesArr, edges: this.edges, adjList, treeInfo };
     }
 
     batchUpdate(callback) {
@@ -281,171 +565,35 @@ class Graph {
         }
     }
 
-    addNode(id, label, x, y) {
-        if (this.nodes.has(id)) return;
+    setWeighted(weighted) {
         this.saveState();
-        const node = {
-            id,
-            label: label || id,
-            x: x !== undefined ? x : Math.random() * this.svg.clientWidth,
-            y: y !== undefined ? y : Math.random() * this.svg.clientHeight,
-            vx: 0,
-            vy: 0,
-            fxed: false,
-            element: null,
-            circle: null
-        };
-        this.createNodeElement(node);
-        this.nodes.set(id, node);
-        this.wake();
-        this.notifyUpdate();
-        return node;
-    }
-
-    createNodeElement(node) {
-        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        g.setAttribute("class", "node-group");
-        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("class", "node");
-        circle.setAttribute("r", "15");
-        circle.dataset.id = node.id;
-        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        text.setAttribute("class", "node-label");
-        text.setAttribute("dy", "5");
-        text.textContent = node.label;
-        g.appendChild(circle);
-        g.appendChild(text);
-        this.nodesLayer.appendChild(g);
-        node.element = g;
-        node.circle = circle;
-        this.updateNodePosition(node);
-    }
-
-    addEdge(sourceId, targetId, isDirected = false) {
-        this.saveState();
-        const source = this.nodes.get(sourceId);
-        const target = this.nodes.get(targetId);
-        if (!source || !target || source === target) return;
-
-        const edge = {
-            source,
-            target,
-            isDirected,
-            weight: 1,
-            label: "1",
-            element: null,
-            hitArea: null,
-            group: null,
-            labelGroup: null,
-            labelText: null
-        };
-        this.createEdgeElement(edge);
-        this.edges.push(edge);
-        this.wake();
-        this.notifyUpdate();
-        return edge;
-    }
-
-    createEdgeElement(edge) {
-        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        g.setAttribute("class", "edge-group");
-        const hitArea = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        hitArea.setAttribute("class", "edge-hit-area");
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("class", `edge ${edge.isDirected ? 'directed' : ''}`);
-        g.appendChild(hitArea);
-        g.appendChild(path);
-
-        const lg = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        lg.setAttribute("class", "edge-label-group");
-        lg.style.display = this.isWeighted ? 'block' : 'none';
-        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        rect.setAttribute("class", "edge-label-bg");
-        rect.setAttribute("rx", "4");
-        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        text.setAttribute("class", "edge-label");
-        text.textContent = edge.label;
-        lg.appendChild(rect);
-        lg.appendChild(text);
-        g.appendChild(lg);
-
-        this.edgesLayer.appendChild(g);
-        edge.element = path;
-        edge.hitArea = hitArea;
-        edge.group = g;
-        edge.labelGroup = lg;
-        edge.labelText = text;
-
-        g.addEventListener('pointerdown', (e) => {
-            if (this.mode === 'select') {
-                e.stopPropagation();
-                this.selectEdge(edge);
-            }
+        this.isWeighted = weighted;
+        this.edges.forEach(e => {
+            if (e.labelGroup) e.labelGroup.style.display = weighted ? 'block' : 'none';
         });
-
-        lg.addEventListener('pointerdown', (e) => {
-            if (this.mode === 'select') {
-                e.stopPropagation();
-                const newVal = prompt("Enter edge weight:", edge.label);
-                if (newVal !== null) {
-                    this.updateEdgeLabel(edge, newVal);
-                }
-            }
-        });
-
-        this.updateEdgePosition(edge);
-    }
-
-    updateEdgeLabel(edge, newVal) {
-        this.saveState();
-        edge.label = newVal;
-        const numericWeight = parseFloat(newVal);
-        if (!isNaN(numericWeight)) {
-            edge.weight = numericWeight;
-        }
-        this.updateEdgeLabelElement(edge);
         this.wake();
         this.notifyUpdate();
-    }
-
-    updateEdgeLabelElement(edge) {
-        if (edge.labelText) {
-            edge.labelText.textContent = edge.label;
-            try {
-                const bbox = edge.labelText.getBBox();
-                const rect = edge.labelGroup.querySelector('.edge-label-bg');
-                rect.setAttribute("x", bbox.x - 4);
-                rect.setAttribute("y", bbox.y - 2);
-                rect.setAttribute("width", bbox.width + 8);
-                rect.setAttribute("height", bbox.height + 4);
-            } catch (e) { }
-        }
     }
 
     updateNodeLabel(id, newLabel) {
-        this.saveState();
         const node = this.nodes.get(id);
         if (node) {
-            node.label = newLabel;
-            const textElement = node.element.querySelector('.node-label');
-            if (textElement) {
-                textElement.textContent = newLabel;
-            }
+            this.saveState();
+            node.updateLabel(newLabel);
             this.notifyUpdate();
         }
     }
 
+    updateEdgeLabel(edge, newVal) {
+        this.saveState();
+        edge.updateLabel(newVal);
+        this.wake();
+        this.notifyUpdate();
+    }
+
     updateEdgeDirectedness(edge, isDirected) {
         this.saveState();
-        edge.isDirected = isDirected;
-        if (edge.element) {
-            edge.element.classList.toggle('directed', isDirected);
-            if (isDirected) {
-                edge.element.setAttribute('marker-end', 'url(#arrowhead)');
-            } else {
-                edge.element.removeAttribute('marker-end');
-            }
-        }
+        edge.setDirected(isDirected);
         this.notifyUpdate();
         this.wake();
     }
@@ -454,15 +602,18 @@ class Graph {
         let draggedNode = null;
         let isPanning = false;
         let startPoint = { x: 0, y: 0 };
+
         this.svg.addEventListener('pointerdown', (e) => {
             const target = e.target;
             const pt = this.getRelativePoint(e.clientX, e.clientY);
+
             if (this.mode === 'addNode') {
                 const id = Date.now().toString();
                 const name = this.nextNodeName || `${this.nodeCounter++}`;
                 this.addNode(id, name, pt.x, pt.y);
                 return;
             }
+
             if (target.classList.contains('node')) {
                 const node = this.nodes.get(target.dataset.id);
                 if (this.mode === 'addEdge') {
@@ -481,8 +632,7 @@ class Graph {
                     this.svg.setPointerCapture(e.pointerId);
                     this.wake();
                 }
-            } else if (target.classList.contains('edge-hit-area')) {
-            } else {
+            } else if (!target.classList.contains('edge-hit-area')) {
                 if (this.mode === 'select') {
                     isPanning = true;
                     startPoint = { x: e.clientX, y: e.clientY };
@@ -490,14 +640,14 @@ class Graph {
                 }
             }
         });
+
         this.svg.addEventListener('pointermove', (e) => {
             if (draggedNode) {
                 const pt = this.getRelativePoint(e.clientX, e.clientY);
                 draggedNode.x = pt.x;
                 draggedNode.y = pt.y;
-                draggedNode.vx = 0;
-                draggedNode.vy = 0;
-                this.updateNodePosition(draggedNode);
+                draggedNode.vx = 0; draggedNode.vy = 0;
+                draggedNode.updatePosition();
                 this.updateConnectedEdges(draggedNode);
                 this.wake();
             } else if (isPanning) {
@@ -509,6 +659,7 @@ class Graph {
                 this.updateViewport();
             }
         });
+
         const stop = () => {
             if (draggedNode) {
                 draggedNode.fxed = false;
@@ -517,8 +668,10 @@ class Graph {
             draggedNode = null;
             isPanning = false;
         };
+
         this.svg.addEventListener('pointerup', stop);
         this.svg.addEventListener('pointercancel', stop);
+
         this.svg.addEventListener('wheel', (e) => {
             e.preventDefault();
             const factor = Math.pow(1.1, -e.deltaY / 100);
@@ -529,6 +682,18 @@ class Graph {
             this.transform.k = newScale;
             this.updateViewport();
         }, { passive: false });
+    }
+
+    getRelativePoint(clientX, clientY) {
+        const rect = this.svg.getBoundingClientRect();
+        return {
+            x: (clientX - rect.left - this.transform.x) / this.transform.k,
+            y: (clientY - rect.top - this.transform.y) / this.transform.k
+        };
+    }
+
+    updateViewport() {
+        this.viewport.setAttribute("transform", `translate(${this.transform.x}, ${this.transform.y}) scale(${this.transform.k})`);
     }
 
     selectNode(node) {
@@ -565,92 +730,11 @@ class Graph {
         this.notifyUpdate();
     }
 
-    removeEdgeObject(edge) {
-        this.saveState();
-        this.edges = this.edges.filter(e => {
-            if (e === edge) {
-                if (e.group) e.group.remove();
-                return false;
-            }
-            return true;
-        });
-        this.notifyUpdate();
-    }
-
-    getRelativePoint(clientX, clientY) {
-        const rect = this.svg.getBoundingClientRect();
-        return {
-            x: (clientX - rect.left - this.transform.x) / this.transform.k,
-            y: (clientY - rect.top - this.transform.y) / this.transform.k
-        };
-    }
-
-    updateViewport() {
-        this.viewport.setAttribute("transform", `translate(${this.transform.x}, ${this.transform.y}) scale(${this.transform.k})`);
-    }
-
-    updateNodePosition(node) {
-        node.element.setAttribute("transform", `translate(${node.x}, ${node.y})`);
-    }
-
-    updateEdgePosition(edge) {
-        if (!edge.element || !edge.hitArea) return;
-
-        const source = edge.source;
-        const target = edge.target;
-        const node1 = source.id < target.id ? source : target;
-        const node2 = source.id < target.id ? target : source;
-
-        const siblings = this.edges.filter(e =>
-            (e.source === node1 && e.target === node2) ||
-            (e.source === node2 && e.target === node1)
-        );
-
-        const count = siblings.length;
-        const index = siblings.indexOf(edge);
-
-        let d;
-        let midX = (source.x + target.x) / 2;
-        let midY = (source.y + target.y) / 2;
-
-        if (count === 1) {
-            d = `M ${source.x} ${source.y} L ${target.x} ${target.y}`;
-        } else {
-            const dx = node2.x - node1.x;
-            const dy = node2.y - node1.y;
-            const len = Math.sqrt(dx * dx + dy * dy) || 1;
-
-            const px = -dy / len;
-            const py = dx / len;
-
-            const step = 30;
-            const offset = (index - (count - 1) / 2) * step;
-            const bmx = (node1.x + node2.x) / 2;
-            const bmy = (node1.y + node2.y) / 2;
-
-            const cx = bmx + px * offset;
-            const cy = bmy + py * offset;
-
-            d = `M ${source.x} ${source.y} Q ${cx} ${cy} ${target.x} ${target.y}`;
-            midX = 0.25 * source.x + 0.5 * cx + 0.25 * target.x;
-            midY = 0.25 * source.y + 0.5 * cy + 0.25 * target.y;
+    wake() {
+        if (this.isSleeping) {
+            this.isSleeping = false;
+            this.animate();
         }
-
-        edge.element.setAttribute("d", d);
-        edge.hitArea.setAttribute("d", d);
-
-        if (edge.labelGroup) {
-            edge.labelGroup.setAttribute("transform", `translate(${midX}, ${midY})`);
-            this.updateEdgeLabelElement(edge);
-        }
-    }
-
-    updateConnectedEdges(node) {
-        this.edges.forEach(edge => {
-            if (edge.source === node || edge.target === node) {
-                this.updateEdgePosition(edge);
-            }
-        });
     }
 
     animate() {
@@ -658,8 +742,11 @@ class Graph {
         const step = () => {
             if (this.isSleeping) return;
             const totalEnergy = this.applyPhysics();
-            this.nodes.forEach(node => this.updateNodePosition(node));
-            this.edges.forEach(edge => this.updateEdgePosition(edge));
+            this.nodes.forEach(node => node.updatePosition());
+            this.edges.forEach(edge => {
+                const siblings = this.getSiblings(edge);
+                edge.updatePosition(siblings);
+            });
             if (totalEnergy < this.energyThreshold) {
                 this.isSleeping = true;
                 this.nodes.forEach(node => { node.vx = 0; node.vy = 0; });
@@ -673,12 +760,11 @@ class Graph {
     applyPhysics() {
         const nodesArr = Array.from(this.nodes.values());
         let totalEnergy = 0;
+
         for (let i = 0; i < nodesArr.length; i++) {
             for (let j = i + 1; j < nodesArr.length; j++) {
-                const n1 = nodesArr[i];
-                const n2 = nodesArr[j];
-                const dx = n2.x - n1.x;
-                const dy = n2.y - n1.y;
+                const n1 = nodesArr[i]; const n2 = nodesArr[j];
+                const dx = n2.x - n1.x; const dy = n2.y - n1.y;
                 const distSq = dx * dx + dy * dy || 1;
                 const force = this.repulsion / distSq;
                 const fx = (dx / Math.sqrt(distSq)) * force;
@@ -688,100 +774,58 @@ class Graph {
             }
         }
 
-        const graphData = this.getGraphData();
-        const isTree = graphData.treeInfo.isTree;
+        const treeInfo = GraphLogic.analyzeTree(nodesArr, this.edges, this.directedEdges);
+        const isTree = treeInfo.isTree;
 
         this.edges.forEach(edge => {
             const dx = edge.target.x - edge.source.x;
             const dy = edge.target.y - edge.source.y;
             const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-
-            const weight = (edge.weight !== undefined) ? edge.weight : 1;
-            const effectiveWeight = Math.max(0.1, weight);
-            const targetLength = (this.isWeighted && !isTree) ? this.edgeLength * effectiveWeight : this.edgeLength;
-
+            const weight = edge.weight || 1;
+            const targetLength = (this.isWeighted && !isTree) ? this.edgeLength * Math.max(0.1, weight) : this.edgeLength;
             const force = (dist - targetLength) * this.attraction;
             const fx = (dx / dist) * force;
             const fy = (dy / dist) * force;
-            edge.source.vx += fx;
-            edge.source.vy += fy;
-            edge.target.vx -= fx;
-            edge.target.vy -= fy;
+            edge.source.vx += fx; edge.source.vy += fy;
+            edge.target.vx -= fx; edge.target.vy -= fy;
         });
+
         nodesArr.forEach(node => {
             if (!node.fxed) {
-                node.x += node.vx;
-                node.y += node.vy;
-                node.vx *= this.damping;
-                node.vy *= this.damping;
+                node.x += node.vx; node.y += node.vy;
+                node.vx *= this.damping; node.vy *= this.damping;
             }
             totalEnergy += node.vx * node.vx + node.vy * node.vy;
         });
         return totalEnergy;
     }
 
-    removeNode(id) {
-        this.saveState();
-        const node = this.nodes.get(id);
-        if (!node) return;
-        this.edges = this.edges.filter(edge => {
+    getSiblings(edge) {
+        const node1 = edge.source.id < edge.target.id ? edge.source : edge.target;
+        const node2 = edge.source.id < edge.target.id ? edge.target : edge.source;
+        return this.edges.filter(e => 
+            (e.source === node1 && e.target === node2) || 
+            (e.source === node2 && e.target === node1)
+        );
+    }
+
+    updateConnectedEdges(node) {
+        this.edges.forEach(edge => {
             if (edge.source === node || edge.target === node) {
-                edge.group.remove();
-                return false;
+                const siblings = this.getSiblings(edge);
+                edge.updatePosition(siblings);
             }
-            return true;
         });
-        node.element.remove();
-        this.nodes.delete(id);
-        this.notifyUpdate();
-    }
-
-    removeEdge(sourceId, targetId) {
-        this.saveState();
-        this.edges = this.edges.filter(edge => {
-            const match = (edge.source.id === sourceId && edge.target.id === targetId) ||
-                (!edge.isDirected && edge.source.id === targetId && edge.target.id === sourceId);
-            if (match) {
-                edge.group.remove();
-                return false;
-            }
-            return true;
-        });
-        this.notifyUpdate();
-    }
-
-    clear() {
-        if (!this.isRestoring) this.saveState();
-        this.nodes.forEach(node => node.element.remove());
-        this.edges.forEach(edge => edge.group.remove());
-        this.nodes.clear();
-        this.edges = [];
-        this.nodeCounter = 1;
-        this.selectedElement = null;
-        this.wake();
-        this.notifyUpdate();
-    }
-
-    setWeighted(weighted) {
-        this.saveState();
-        this.isWeighted = weighted;
-        this.wake();
-        this.notifyUpdate();
     }
 
     stopAlgorithm() {
-        if (this.algoController) {
-            this.algoController.aborted = true;
-        }
+        if (this.algoController) this.algoController.aborted = true;
         this.clearHighlights();
     }
 
     clearHighlights() {
         this.nodes.forEach(n => {
-            if (n.element) {
-                const circle = n.element.querySelector('.node');
-                if (circle) circle.classList.remove('visited', 'processing');
-            }
+            if (n.circle) n.circle.classList.remove('visited', 'processing');
         });
         this.edges.forEach(e => {
             if (e.element) e.element.classList.remove('traversed');
