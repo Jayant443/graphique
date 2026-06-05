@@ -27,7 +27,8 @@ const buttons = {
     vizQueue: document.getElementById('viz-queue'),
     vizOrder: document.getElementById('viz-order'),
     vizAlgoName: document.getElementById('viz-algo-name'),
-    vizStructureLabel: document.getElementById('viz-structure-label')
+    vizStructureLabel: document.getElementById('viz-structure-label'),
+    shortestPathOptions: document.getElementById('shortest-path-options')
 };
 
 function setActiveButton(activeId) {
@@ -462,6 +463,10 @@ let shortestPathTarget = null;
 
 buttons.algoSelect.addEventListener('change', () => {
     const val = buttons.algoSelect.value;
+    if (buttons.shortestPathOptions) {
+        buttons.shortestPathOptions.style.display = val === 'shortest-path' ? 'block' : 'none';
+    }
+
     isAlgoRunning = false;
     graph.stopAlgorithm();
     buttons.runAlgo.style.display = 'block';
@@ -627,27 +632,27 @@ window.addEventListener('keydown', (e) => {
 
 setActiveButton('select');
 
-const svgWidth = 1000;
-const svgHeight = 600;
-const centerX = svgWidth / 2;
-const startY = 100;
-const levelHeight = 120;
-const horizontalGap = 200;
+const demoData = {
+    nodes: [
+        { id: "1", label: "Root", x: 650, y: 150 },
+        { id: "2", label: "A", x: 500, y: 200 },
+        { id: "3", label: "B", x: 800, y: 250 },
+        { id: "4", label: "C", x: 500, y: 350 },
+        { id: "5", label: "D", x: 350, y: 150 },
+        { id: "6", label: "E", x: 900, y: 150 },
+        { id: "7", label: "F", x: 800, y: 400 },
+        { id: "8", label: "G", x: 350, y: 450 },
+        { id: "9", label: "H", x: 650, y: 450 },
+        { id: "10", label: "I", x: 150, y: 54 + 100 },
+        { id: "11", label: "J", x: 900, y: 500 }
+    ],
+    edges: [
+        { s: "1", t: "2" }, { s: "1", t: "3" }, { s: "2", t: "4" }, { s: "2", t: "5" },
+        { s: "3", t: "6" }, { s: "3", t: "7" }, { s: "4", t: "8" }, { s: "4", t: "9" },
+        { s: "7", t: "9" }, { s: "5", t: "10" }, { s: "7", t: "11" }
+    ]
+};
 
-const demoNodes = [
-    { id: '1', label: 'Root', x: centerX, y: startY },
-    { id: '2', label: 'A', x: centerX - horizontalGap, y: startY + levelHeight },
-    { id: '3', label: 'B', x: centerX + horizontalGap, y: startY + levelHeight },
-    { id: '4', label: 'C', x: centerX - horizontalGap - horizontalGap / 2, y: startY + 2 * levelHeight },
-    { id: '5', label: 'D', x: centerX - horizontalGap + horizontalGap / 2, y: startY + 2 * levelHeight },
-    { id: '6', label: 'E', x: centerX + horizontalGap - horizontalGap / 2, y: startY + 2 * levelHeight },
-    { id: '7', label: 'F', x: centerX + horizontalGap + horizontalGap / 2, y: startY + 2 * levelHeight }
-];
+demoData.nodes.forEach(n => graph.addNode(n.id, n.label, n.x, n.y));
+demoData.edges.forEach(e => graph.addEdge(e.s, e.t));
 
-demoNodes.forEach(n => graph.addNode(n.id, n.label, n.x, n.y));
-graph.addEdge('1', '2');
-graph.addEdge('1', '3');
-graph.addEdge('2', '4');
-graph.addEdge('2', '5');
-graph.addEdge('3', '6');
-graph.addEdge('3', '7');
