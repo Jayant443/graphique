@@ -501,7 +501,7 @@ buttons.runAlgo.addEventListener('click', async () => {
         buttons.stopAlgo.style.display = 'block';
         buttons.vizPanel.classList.add('active');
 
-        const result = await graph.runShortestPath(shortestPathSource.id, shortestPathTarget.id, (state) => {
+        const result = await graph.algorithms.runShortestPath(shortestPathSource.id, shortestPathTarget.id, (state) => {
             buttons.vizQueue.innerHTML = `<div class="status-info">${state.message}</div>`;
         });
 
@@ -545,9 +545,9 @@ buttons.runAlgo.addEventListener('click', async () => {
     };
 
     if (algo === 'bfs') {
-        await graph.runBFS(startNode.id, updateViz);
+        await graph.algorithms.runBFS(startNode.id, updateViz);
     } else if (algo === 'dfs') {
-        await graph.runDFS(startNode.id, updateViz);
+        await graph.algorithms.runDFS(startNode.id, updateViz);
     }
 
     if (isAlgoRunning) {
