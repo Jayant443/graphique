@@ -535,7 +535,7 @@ class Graph {
         const nodesArr = Array.from(this.nodes.values());
         const adjList = GraphLogic.getAdjacencyList(nodesArr, this.edges);
         const treeInfo = GraphLogic.analyzeTree(nodesArr, this.edges, this.directedEdges);
-        return { nodes: nodesArr, edges: this.edges, adjList, treeInfo };
+        return { nodes: nodesArr, edges: this.edges, adjList: adjList, treeInfo: treeInfo };
     }
 
     batchUpdate(callback) {

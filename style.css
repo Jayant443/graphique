@@ -770,25 +770,6 @@ select:focus-visible,
     font-style: italic;
 }
 
-.path-result {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.total-dist {
-    font-weight: 700;
-    color: var(--primary-color);
-    font-size: 1.1rem;
-}
-
-.viz-nodes-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.4rem;
-}
-
 .mode-addNode #graph-container {
     cursor: crosshair;
 }

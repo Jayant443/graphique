@@ -27,8 +27,7 @@ const buttons = {
     vizQueue: document.getElementById('viz-queue'),
     vizOrder: document.getElementById('viz-order'),
     vizAlgoName: document.getElementById('viz-algo-name'),
-    vizStructureLabel: document.getElementById('viz-structure-label'),
-    shortestPathOptions: document.getElementById('shortest-path-options')
+    vizStructureLabel: document.getElementById('viz-structure-label')
 };
 
 function setActiveButton(activeId) {
@@ -259,7 +258,7 @@ buttons.download.addEventListener('click', () => {
             ctx.font = '11px sans-serif';
             const orderNodes = Array.from(buttons.vizOrder.querySelectorAll('.viz-node')).map(el => el.textContent);
             if (orderNodes.length > 0) {
-                ctx.fillText('Order/Path:', width + padding, y);
+                ctx.fillText('Order:', width + padding, y);
                 y += 15;
                 let pathText = orderNodes.join(' → ');
                 const words = pathText.split(' ');
@@ -458,38 +457,22 @@ buttons.graphType.addEventListener('change', (e) => {
 });
 
 let isAlgoRunning = false;
-let shortestPathSource = null;
-let shortestPathTarget = null;
 
 buttons.algoSelect.addEventListener('change', () => {
     const val = buttons.algoSelect.value;
-    if (buttons.shortestPathOptions) {
-        buttons.shortestPathOptions.style.display = val === 'shortest-path' ? 'block' : 'none';
-    }
 
     isAlgoRunning = false;
     graph.stopAlgorithm();
     buttons.runAlgo.style.display = 'block';
     buttons.stopAlgo.style.display = 'none';
 
-    shortestPathSource = null;
-    shortestPathTarget = null;
-
-    if (val === 'shortest-path') {
-        buttons.runAlgo.disabled = true;
-        buttons.vizAlgoName.textContent = 'Shortest Path';
-        buttons.vizStructureLabel.textContent = 'Status';
-        buttons.vizQueue.innerHTML = '<div class="empty-state">Select Source Node</div>';
-        buttons.vizOrder.innerHTML = '<div class="empty-state">No path computed</div>';
+    buttons.runAlgo.disabled = (val === 'none' || !graph.selectedElement || graph.selectedElement.type !== 'node');
+    if (val === 'none') {
+        buttons.vizPanel.classList.remove('active');
+        graph.clearHighlights();
     } else {
-        buttons.runAlgo.disabled = (val === 'none' || !graph.selectedElement || graph.selectedElement.type !== 'node');
-        if (val === 'none') {
-            buttons.vizPanel.classList.remove('active');
-            graph.clearHighlights();
-        } else {
-            buttons.vizAlgoName.textContent = val === 'bfs' ? 'BFS State' : 'DFS State';
-            buttons.vizStructureLabel.textContent = val === 'bfs' ? 'Queue' : 'Recursion Stack';
-        }
+        buttons.vizAlgoName.textContent = val === 'bfs' ? 'BFS State' : 'DFS State';
+        buttons.vizStructureLabel.textContent = val === 'bfs' ? 'Queue' : 'Recursion Stack';
     }
 });
 
@@ -497,36 +480,6 @@ buttons.runAlgo.addEventListener('click', async () => {
     if (isAlgoRunning) return;
 
     const algo = buttons.algoSelect.value;
-
-    if (algo === 'shortest-path') {
-        if (!shortestPathSource || !shortestPathTarget) return;
-
-        isAlgoRunning = true;
-        buttons.runAlgo.style.display = 'none';
-        buttons.stopAlgo.style.display = 'block';
-        buttons.vizPanel.classList.add('active');
-
-        const result = await graph.algorithms.runShortestPath(shortestPathSource.id, shortestPathTarget.id, (state) => {
-            buttons.vizQueue.innerHTML = `<div class="status-info">${state.message}</div>`;
-        });
-
-        if (result && result.path) {
-            buttons.vizOrder.innerHTML = `
-                <div class="path-result">
-                    <div class="total-dist">Distance: ${result.distance}</div>
-                    <div class="viz-nodes-row">
-                        ${result.path.map(node => `<span class="viz-node">${node.label}</span>`).join(' → ')}
-                    </div>
-                </div>`;
-        } else {
-            buttons.vizOrder.innerHTML = '<div class="empty-state">No path found</div>';
-        }
-
-        isAlgoRunning = false;
-        buttons.runAlgo.style.display = 'block';
-        buttons.stopAlgo.style.display = 'none';
-        return;
-    }
 
     if (!graph.selectedElement || graph.selectedElement.type !== 'node') return;
 
@@ -568,47 +521,25 @@ buttons.stopAlgo.addEventListener('click', () => {
     buttons.runAlgo.style.display = 'block';
     buttons.stopAlgo.style.display = 'none';
 
-    if (buttons.algoSelect.value === 'shortest-path') {
-        shortestPathSource = null;
-        shortestPathTarget = null;
-        buttons.vizQueue.innerHTML = '<div class="empty-state">Select Source Node</div>';
-        buttons.vizOrder.innerHTML = '<div class="empty-state">No path computed</div>';
-    } else {
-        buttons.vizQueue.innerHTML = '<div class="empty-state">Empty</div>';
-        buttons.vizOrder.innerHTML = '<div class="empty-state">No nodes visited</div>';
-    }
+    buttons.vizQueue.innerHTML = '<div class="empty-state">Empty</div>';
+    buttons.vizOrder.innerHTML = '<div class="empty-state">No nodes visited</div>';
 });
 
 graph.onSelectionChange = (selection) => {
-    const algo = buttons.algoSelect.value;
     document.body.classList.remove('selection-node', 'selection-edge');
-
-    if (algo === 'shortest-path' && selection && selection.type === 'node') {
-        if (!shortestPathSource) {
-            shortestPathSource = selection.data;
-            selection.data.element.querySelector('.node').classList.add('processing');
-            buttons.vizQueue.innerHTML = '<div class="empty-state">Select Target Node</div>';
-        } else if (!shortestPathTarget && selection.data !== shortestPathSource) {
-            shortestPathTarget = selection.data;
-            selection.data.element.querySelector('.node').classList.add('processing');
-            buttons.runAlgo.disabled = false;
-            buttons.vizQueue.innerHTML = '<div class="empty-state">Ready to Run</div>';
-        }
-        return;
-    }
 
     if (selection && selection.type === 'node') {
         document.body.classList.add('selection-node');
         buttons.nodeNameInput.value = selection.data.label;
-        if (buttons.algoSelect.value !== 'none' && buttons.algoSelect.value !== 'shortest-path') buttons.runAlgo.disabled = false;
+        if (buttons.algoSelect.value !== 'none') buttons.runAlgo.disabled = false;
     } else if (selection && selection.type === 'edge') {
         document.body.classList.add('selection-edge');
         buttons.directed.checked = selection.data.isDirected;
         buttons.nodeNameInput.value = graph.nextNodeName;
-        if (buttons.algoSelect.value !== 'shortest-path') buttons.runAlgo.disabled = true;
+        buttons.runAlgo.disabled = true;
     } else {
         buttons.nodeNameInput.value = graph.nextNodeName;
-        if (buttons.algoSelect.value !== 'shortest-path') buttons.runAlgo.disabled = true;
+        buttons.runAlgo.disabled = true;
     }
 };
 
@@ -634,25 +565,20 @@ setActiveButton('select');
 
 const demoData = {
     nodes: [
-        { id: "1", label: "Root", x: 650, y: 150 },
-        { id: "2", label: "A", x: 500, y: 200 },
-        { id: "3", label: "B", x: 800, y: 250 },
-        { id: "4", label: "C", x: 500, y: 350 },
-        { id: "5", label: "D", x: 350, y: 150 },
-        { id: "6", label: "E", x: 900, y: 150 },
-        { id: "7", label: "F", x: 800, y: 400 },
-        { id: "8", label: "G", x: 350, y: 450 },
-        { id: "9", label: "H", x: 650, y: 450 },
-        { id: "10", label: "I", x: 150, y: 54 + 100 },
-        { id: "11", label: "J", x: 900, y: 500 }
+        { id: "1", label: "A", x: 650, y: 150 },
+        { id: "2", label: "B", x: 500, y: 200 },
+        { id: "3", label: "C", x: 400, y: 300 },
+        { id: "8", label: "X", x: 550, y: 400 },
+        { id: "4", label: "D", x: 400, y: 400 },
+        { id: "5", label: "E", x: 550, y: 600 },
+        { id: "6", label: "F", x: 600, y: 600 },
+        { id: "7", label: "G", x: 800, y: 400 }
     ],
     edges: [
-        { s: "1", t: "2" }, { s: "1", t: "3" }, { s: "2", t: "4" }, { s: "2", t: "5" },
-        { s: "3", t: "6" }, { s: "3", t: "7" }, { s: "4", t: "8" }, { s: "4", t: "9" },
-        { s: "7", t: "9" }, { s: "5", t: "10" }, { s: "7", t: "11" }
+        { s: "1", t: "2" }, {s: "1", t: "8"}, {s: "8", t:"4"}, {}, { s: "2", t: "3" },  { s: "3", t: "4" },
+        { s: "4", t: "5" }, { s: "5", t: "6" }, { s: "6", t: "7" }, { s: "7", t: "1" }
     ]
 };
 
 demoData.nodes.forEach(n => graph.addNode(n.id, n.label, n.x, n.y));
 demoData.edges.forEach(e => graph.addEdge(e.s, e.t));
-
