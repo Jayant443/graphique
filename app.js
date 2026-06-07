@@ -23,6 +23,7 @@ const buttons = {
     algoSelect: document.getElementById('select-algo'),
     runAlgo: document.getElementById('btn-run-algo'),
     stopAlgo: document.getElementById('btn-stop-algo'),
+    pauseAlgo: document.getElementById('btn-pause-algo'),
     vizPanel: document.getElementById('viz-panel'),
     vizQueue: document.getElementById('viz-queue'),
     vizOrder: document.getElementById('viz-order'),
@@ -465,6 +466,7 @@ buttons.algoSelect.addEventListener('change', () => {
     graph.stopAlgorithm();
     buttons.runAlgo.style.display = 'block';
     buttons.stopAlgo.style.display = 'none';
+    buttons.pauseAlgo.style.display = 'none';
 
     buttons.runAlgo.disabled = (val === 'none' || !graph.selectedElement || graph.selectedElement.type !== 'node');
     if (val === 'none') {
@@ -486,6 +488,8 @@ buttons.runAlgo.addEventListener('click', async () => {
     isAlgoRunning = true;
     buttons.runAlgo.style.display = 'none';
     buttons.stopAlgo.style.display = 'block';
+    buttons.pauseAlgo.style.display = 'block';
+    buttons.pauseAlgo.textContent = 'Pause';
     buttons.vizPanel.classList.add('active');
 
     const startNode = graph.selectedElement.data;
@@ -512,6 +516,7 @@ buttons.runAlgo.addEventListener('click', async () => {
         isAlgoRunning = false;
         buttons.runAlgo.style.display = 'block';
         buttons.stopAlgo.style.display = 'none';
+        buttons.pauseAlgo.style.display = 'none';
     }
 });
 
@@ -520,9 +525,17 @@ buttons.stopAlgo.addEventListener('click', () => {
     graph.stopAlgorithm();
     buttons.runAlgo.style.display = 'block';
     buttons.stopAlgo.style.display = 'none';
+    buttons.pauseAlgo.style.display = 'none';
 
     buttons.vizQueue.innerHTML = '<div class="empty-state">Empty</div>';
     buttons.vizOrder.innerHTML = '<div class="empty-state">No nodes visited</div>';
+});
+
+buttons.pauseAlgo.addEventListener('click', () => {
+    if (graph.algoController) {
+        graph.algoController.paused = !graph.algoController.paused;
+        buttons.pauseAlgo.textContent = graph.algoController.paused ? 'Resume' : 'Pause';
+    }
 });
 
 graph.onSelectionChange = (selection) => {

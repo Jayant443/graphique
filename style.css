@@ -232,6 +232,13 @@ select:focus-visible,
     display: none;
 }
 
+#btn-pause-algo {
+    display: none;
+    margin-top: 8px;
+    background: #f50b0b;
+    box-shadow: 0 6px 14px rgba(245, 158, 11, 0.18);
+}
+
 #algo-hint {
     margin: 10px 2px 0;
     color: var(--text-muted);

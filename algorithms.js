@@ -3,12 +3,18 @@ class GraphAlgorithms {
         this.graph = graph;
     }
 
+    async waitIfPaused(controller) {
+        while (controller.paused && !controller.aborted) {
+            await new Promise(r => setTimeout(r, 100));
+        }
+    }
+
     async runBFS(startNodeId, onStep) {
         this.graph.clearHighlights();
         const startNode = this.graph.nodes.get(startNodeId);
         if (!startNode) return;
 
-        const controller = { aborted: false };
+        const controller = { aborted: false, paused: false };
         this.graph.algoController = controller;
 
         const queue = [startNode];
@@ -19,6 +25,9 @@ class GraphAlgorithms {
         if (onStep) onStep({ queue: queue.map(n => n.label), order: order.map(n => n.label) });
 
         while (queue.length > 0 && !controller.aborted) {
+            await this.waitIfPaused(controller);
+            if (controller.aborted) break;
+
             const current = queue.shift();
             order.push(current);
 
@@ -32,10 +41,12 @@ class GraphAlgorithms {
             });
 
             await new Promise(r => setTimeout(r, 800));
+            await this.waitIfPaused(controller);
             if (controller.aborted) break;
 
             const neighbors = this.graph.getGraphData().adjList.get(current.id);
             for (const neighbor of neighbors) {
+                await this.waitIfPaused(controller);
                 if (controller.aborted) break;
                 if (!visited.has(neighbor.id)) {
                     visited.add(neighbor.id);
@@ -66,7 +77,7 @@ class GraphAlgorithms {
         const startNode = this.graph.nodes.get(startNodeId);
         if (!startNode) return;
 
-        const controller = { aborted: false };
+        const controller = { aborted: false, paused: false };
         this.graph.algoController = controller;
 
         const visited = new Set();
@@ -74,6 +85,7 @@ class GraphAlgorithms {
         const stack = [];
 
         const dfs = async (node) => {
+            await this.waitIfPaused(controller);
             if (controller.aborted) return;
 
             visited.add(node.id);
@@ -88,6 +100,7 @@ class GraphAlgorithms {
             });
 
             await new Promise(r => setTimeout(r, 800));
+            await this.waitIfPaused(controller);
             if (controller.aborted) return;
 
             node.element.querySelector('.node').classList.remove('processing');
@@ -95,6 +108,7 @@ class GraphAlgorithms {
 
             const neighbors = this.graph.getGraphData().adjList.get(node.id);
             for (const neighbor of neighbors) {
+                await this.waitIfPaused(controller);
                 if (controller.aborted) return;
                 if (!visited.has(neighbor.id)) {
                     const neighborNode = this.graph.nodes.get(neighbor.id);
