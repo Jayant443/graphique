@@ -28,7 +28,9 @@ const buttons = {
     vizQueue: document.getElementById('viz-queue'),
     vizOrder: document.getElementById('viz-order'),
     vizAlgoName: document.getElementById('viz-algo-name'),
-    vizStructureLabel: document.getElementById('viz-structure-label')
+    vizStructureLabel: document.getElementById('viz-structure-label'),
+    vizDistancesSection: document.getElementById('viz-distances-section'),
+    vizDistances: document.getElementById('viz-distances')
 };
 
 function setActiveButton(activeId) {
@@ -473,8 +475,19 @@ buttons.algoSelect.addEventListener('change', () => {
         buttons.vizPanel.classList.remove('active');
         graph.clearHighlights();
     } else {
-        buttons.vizAlgoName.textContent = val === 'bfs' ? 'BFS State' : 'DFS State';
-        buttons.vizStructureLabel.textContent = val === 'bfs' ? 'Queue' : 'Recursion Stack';
+        if (val === 'bfs') {
+            buttons.vizAlgoName.textContent = 'BFS State';
+            buttons.vizStructureLabel.textContent = 'Queue';
+            buttons.vizDistancesSection.style.display = 'none';
+        } else if (val === 'dfs') {
+            buttons.vizAlgoName.textContent = 'DFS State';
+            buttons.vizStructureLabel.textContent = 'Recursion Stack';
+            buttons.vizDistancesSection.style.display = 'none';
+        } else if (val === 'dijkstra') {
+            buttons.vizAlgoName.textContent = 'Dijkstra State';
+            buttons.vizStructureLabel.textContent = 'Queue';
+            buttons.vizDistancesSection.style.display = 'block';
+        }
     }
 });
 
@@ -495,14 +508,29 @@ buttons.runAlgo.addEventListener('click', async () => {
     const startNode = graph.selectedElement.data;
 
     const updateViz = (state) => {
-        buttons.vizQueue.innerHTML = state.queue && state.queue.length > 0
-            ? state.queue.map(label => `<span class="viz-node">${label}</span>`).join('')
-            : (state.stack && state.stack.length > 0
-                ? state.stack.map(label => `<span class="viz-node">${label}</span>`).join('')
-                : `<div class="empty-state">${algo === 'bfs' ? 'Queue' : 'Stack'} is empty</div>`);
+        const startLabel = startNode.label;
+        if (algo === 'dijkstra') {
+            buttons.vizQueue.innerHTML = state.pq && state.pq.length > 0
+                ? state.pq.map(label => `<span class="viz-node ${label === startLabel ? 'source' : ''}">${label}</span>`).join('')
+                : `<div class="empty-state">Queue is empty</div>`;
+            
+            buttons.vizDistances.innerHTML = state.distances 
+                ? Object.entries(state.distances).map(([label, dist]) => `
+                    <div class="viz-distance-item ${label === startLabel ? 'source' : ''}">
+                        <span class="viz-node ${label === startLabel ? 'source' : ''}">${label}</span>
+                        <span class="viz-dist-val">${dist}</span>
+                    </div>`).join('')
+                : '<div class="empty-state">No distances calculated</div>';
+        } else {
+            buttons.vizQueue.innerHTML = state.queue && state.queue.length > 0
+                ? state.queue.map(label => `<span class="viz-node ${label === startLabel ? 'source' : ''}">${label}</span>`).join('')
+                : (state.stack && state.stack.length > 0
+                    ? state.stack.map(label => `<span class="viz-node ${label === startLabel ? 'source' : ''}">${label}</span>`).join('')
+                    : `<div class="empty-state">${algo === 'bfs' ? 'Queue' : 'Stack'} is empty</div>`);
+        }
 
         buttons.vizOrder.innerHTML = state.order.length > 0
-            ? state.order.map((label, i) => `<span class="viz-node ${label === state.currentNode ? 'current' : ''}">${label}</span>`).join('')
+            ? state.order.map((label, i) => `<span class="viz-node ${label === state.currentNode ? 'current' : ''} ${label === startLabel ? 'source' : ''}">${label}</span>`).join('')
             : '<div class="empty-state">No nodes visited</div>';
     };
 
@@ -510,6 +538,8 @@ buttons.runAlgo.addEventListener('click', async () => {
         await graph.algorithms.runBFS(startNode.id, updateViz);
     } else if (algo === 'dfs') {
         await graph.algorithms.runDFS(startNode.id, updateViz);
+    } else if (algo === 'dijkstra') {
+        await graph.algorithms.runDijkstra(startNode.id, updateViz);
     }
 
     if (isAlgoRunning) {

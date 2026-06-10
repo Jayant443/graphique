@@ -27,6 +27,7 @@
                             <option value="none">Select Algorithm</option>
                             <option value="bfs">Breadth-First Search (BFS)</option>
                             <option value="dfs">Depth-First Search (DFS)</option>
+                            <option value="dijkstra">Dijkstra's Algorithm</option>
                         </select>
                         <button id="btn-run-algo" class="algo-btn" disabled>Run Algorithm</button>
                         <button id="btn-stop-algo" class="algo-btn danger">Stop</button>
@@ -235,6 +236,12 @@
                 <h4>Visitation Order</h4>
                 <div class="panel-card viz-card" id="viz-order">
                     <div class="empty-state">No nodes visited</div>
+                </div>
+            </div>
+            <div id="viz-distances-section" class="panel-section" style="display: none;">
+                <h4>Shortest Distances</h4>
+                <div class="panel-card viz-card" id="viz-distances">
+                    <div class="empty-state">No distances calculated</div>
                 </div>
             </div>
         </aside>

@@ -72,6 +72,101 @@ class GraphAlgorithms {
         this.graph.algoController = null;
     }
 
+    async runDijkstra(startNodeId, onStep) {
+        this.graph.clearHighlights();
+        const startNode = this.graph.nodes.get(startNodeId);
+        if (!startNode) return;
+
+        const controller = { aborted: false, paused: false };
+        this.graph.algoController = controller;
+
+        const { nodes: nodesArr, adjList } = this.graph.getGraphData();
+        const V = nodesArr.length;
+        
+        const idToIndex = new Map();
+        const indexToNode = [];
+        nodesArr.forEach((node, i) => {
+            idToIndex.set(node.id, i);
+            indexToNode[i] = node;
+        });
+
+        const dist = new Array(V).fill(Infinity);
+        const visited = new Array(V).fill(false);
+        const order = [];
+        const startIndex = idToIndex.get(startNodeId);
+        dist[startIndex] = 0;
+
+        const getVizState = (uIndex = -1) => {
+            const distances = {};
+            indexToNode.forEach((node, i) => {
+                distances[node.label] = dist[i] === Infinity ? '∞' : dist[i];
+            });
+            const queue = indexToNode
+                .filter((node, i) => !visited[i] && dist[i] !== Infinity)
+                .map(node => node.label);
+            
+            return {
+                queue: queue,
+                pq: queue,
+                order: order.map(n => n.label),
+                currentNode: uIndex !== -1 ? indexToNode[uIndex].label : null,
+                distances: distances
+            };
+        };
+
+        if (onStep) onStep(getVizState());
+
+        for (let i = 0; i < V; i++) {
+            await this.waitIfPaused(controller);
+            if (controller.aborted) break;
+
+            let u = -1;
+            for (let v = 0; v < V; v++) {
+                if (!visited[v] && (u === -1 || dist[v] < dist[u])) {
+                    u = v;
+                }
+            }
+
+            if (u === -1 || dist[u] === Infinity) break;
+            
+            const uNode = indexToNode[u];
+            visited[u] = true;
+            order.push(uNode);
+            
+            uNode.element.querySelector('.node').classList.add('processing');
+            if (onStep) onStep(getVizState(u));
+
+            await new Promise(r => setTimeout(r, 800));
+            await this.waitIfPaused(controller);
+            if (controller.aborted) break;
+
+            uNode.element.querySelector('.node').classList.remove('processing');
+            uNode.element.querySelector('.node').classList.add('visited');
+
+            const neighbors = adjList.get(uNode.id) || [];
+            for (const neighbor of neighbors) {
+                const v = idToIndex.get(neighbor.id);
+                if (!visited[v]) {
+                    const alt = dist[u] + neighbor.weight;
+                    if (alt < dist[v]) {
+                        dist[v] = alt;
+                        
+                        const vNode = indexToNode[v];
+                        const edge = this.graph.edges.find(e =>
+                            (e.source.id === uNode.id && e.target.id === vNode.id) ||
+                            (!e.isDirected && e.source.id === vNode.id && e.target.id === uNode.id)
+                        );
+                        if (edge) edge.element.classList.add('traversed');
+
+                        if (onStep) onStep(getVizState(u));
+                        await new Promise(r => setTimeout(r, 400));
+                    }
+                }
+            }
+        }
+        this.graph.algoController = null;
+    }
+
     async runDFS(startNodeId, onStep) {
         this.graph.clearHighlights();
         const startNode = this.graph.nodes.get(startNodeId);
