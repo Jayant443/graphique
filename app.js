@@ -328,12 +328,21 @@ graph.onGraphUpdate = (data) => {
         listHtml += `
             <div class="adj-list-item" data-source-id="${node.id}">
                 <div class="adj-list-header">
-                    <span class="adj-list-node">${node.label}:</span>
+                    <span class="adj-list-node">${node.label}<span class="live-coords" data-node-id="${node.id}">(${Math.round(node.x)}, ${Math.round(node.y)})</span>:</span>
                     <span class="adj-list-neighbors" contenteditable="true" spellcheck="false">${neighborLabels.join(', ') || ' '}</span>
                 </div>
             </div>`;
     });
     panelElements.adjList.innerHTML = listHtml || 'No nodes';
+
+    graph.onAnimationStep = (nodes) => {
+        nodes.forEach(node => {
+            const el = panelElements.adjList.querySelector(`.live-coords[data-node-id="${node.id}"]`);
+            if (el) {
+                el.textContent = `(${Math.round(node.x)}, ${Math.round(node.y)})`;
+            }
+        });
+    };
 
     if (nodes.length > 0) {
         let matrixHtml = '<tr><th></th>' + nodes.map(n => `<th>${n.label[0]}</th>`).join('') + '</tr>';

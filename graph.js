@@ -767,6 +767,11 @@ class Graph {
                 const siblings = this.getSiblings(edge);
                 edge.updatePosition(siblings);
             });
+            
+            if (this.onAnimationStep) {
+                this.onAnimationStep(Array.from(this.nodes.values()));
+            }
+
             if (totalEnergy < this.energyThreshold) {
                 this.isSleeping = true;
                 this.nodes.forEach(node => { node.vx = 0; node.vy = 0; });
