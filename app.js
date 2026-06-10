@@ -30,7 +30,8 @@ const buttons = {
     vizAlgoName: document.getElementById('viz-algo-name'),
     vizStructureLabel: document.getElementById('viz-structure-label'),
     vizDistancesSection: document.getElementById('viz-distances-section'),
-    vizDistances: document.getElementById('viz-distances')
+    vizDistances: document.getElementById('viz-distances'),
+    coords: document.getElementById('viz-coords')
 };
 
 function setActiveButton(activeId) {
@@ -606,22 +607,52 @@ window.addEventListener('keydown', (e) => {
 
 setActiveButton('select');
 
-const demoData = {
-    nodes: [
-        { id: "1", label: "A", x: 650, y: 150 },
-        { id: "2", label: "B", x: 500, y: 200 },
-        { id: "3", label: "C", x: 400, y: 300 },
-        { id: "8", label: "X", x: 550, y: 400 },
-        { id: "4", label: "D", x: 400, y: 400 },
-        { id: "5", label: "E", x: 550, y: 600 },
-        { id: "6", label: "F", x: 600, y: 600 },
-        { id: "7", label: "G", x: 800, y: 400 }
+const defaultData = {
+    "nodes": [
+      { "id": "1", "label": "A", "x": 63, "y": 235 },
+      { "id": "2", "label": "B", "x": -180, "y": 300 },
+      { "id": "3", "label": "C", "x": -500, "y": 300 },
+      { "id": "8", "label": "X", "x": -250, "y": -100 },
+      { "id": "4", "label": "D", "x": -370, "y": -170 },
+      { "id": "5", "label": "E", "x": 120, "y": -330 },
+      { "id": "6", "label": "F", "x": 300, "y": -200 },
+      { "id": "7", "label": "G", "x": 500, "y": 130 }
     ],
-    edges: [
-        { s: "1", t: "2" }, {s: "1", t: "8"}, {s: "8", t:"4"}, {}, { s: "2", t: "3" },  { s: "3", t: "4" },
-        { s: "4", t: "5" }, { s: "5", t: "6" }, { s: "6", t: "7" }, { s: "7", t: "1" }
-    ]
-};
+    "edges": [
+      { "sourceId": "1", "targetId": "7", "isDirected": false, "weight": 5, "label": "5" },
+      { "sourceId": "2", "targetId": "1", "isDirected": false, "weight": 3, "label": "3" },
+      { "sourceId": "3", "targetId": "2", "isDirected": false, "weight": 4, "label": "4" },
+      { "sourceId": "8", "targetId": "1", "isDirected": false, "weight": 4, "label": "4" },
+      { "sourceId": "4", "targetId": "5", "isDirected": false, "weight": 5, "label": "5" },
+      { "sourceId": "4", "targetId": "3", "isDirected": false, "weight": 6, "label": "6" },
+      { "sourceId": "4", "targetId": "8", "isDirected": false, "weight": 2, "label": "2" },
+      { "sourceId": "6", "targetId": "5", "isDirected": false, "weight": 2, "label": "2" },
+      { "sourceId": "6", "targetId": "7", "isDirected": false, "weight": 4, "label": "4" }
+    ],
+    "settings": {
+      "physics": { "repulsion": 400, "attraction": 0.01, "edgeLength": 100, "damping": 0.7 },
+      "directedEdges": false, "nextNodeName": "", "isWeighted": true
+    }
+  };
 
-demoData.nodes.forEach(n => graph.addNode(n.id, n.label, n.x, n.y));
-demoData.edges.forEach(e => graph.addEdge(e.s, e.t));
+  graph.deserialize(defaultData);
+  graph.centerGraph();
+
+  if (defaultData.settings) {
+      if (defaultData.settings.physics) {
+          buttons.edgeLength.value = defaultData.settings.physics.edgeLength;
+          buttons.edgeLengthVal.textContent = defaultData.settings.physics.edgeLength;
+      }
+      buttons.directed.checked = defaultData.settings.directedEdges;
+      buttons.nodeNameInput.value = defaultData.settings.nextNodeName || "";
+      buttons.graphType.value = defaultData.settings.isWeighted ? 'weighted' : 'unweighted';
+  }
+
+  const container = document.getElementById('graph-container');
+  container.addEventListener('mousemove', (e) => {
+      const pt = graph.getRelativePoint(e.clientX, e.clientY);
+      const x = Math.round(pt.x);
+      const y = Math.round(pt.y);
+
+      buttons.coords.textContent = `X: ${x}, Y: ${y}`;
+  });

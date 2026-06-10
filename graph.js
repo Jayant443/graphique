@@ -36,7 +36,8 @@ class GraphNode {
 
     updatePosition() {
         if (this.element) {
-            this.element.setAttribute("transform", `translate(${this.x}, ${this.y})`);
+            // Invert Y for SVG transformation so positive Y is visually up
+            this.element.setAttribute("transform", `translate(${this.x}, ${-this.y})`);
         }
     }
 
@@ -122,19 +123,23 @@ class GraphEdge {
 
         const count = siblings.length;
         const index = siblings.indexOf(this);
+        const sY = -this.source.y;
+        const tY = -this.target.y;
 
         let d;
         let midX = (this.source.x + this.target.x) / 2;
-        let midY = (this.source.y + this.target.y) / 2;
+        let midY = (sY + tY) / 2;
 
         if (count === 1) {
-            d = `M ${this.source.x} ${this.source.y} L ${this.target.x} ${this.target.y}`;
+            d = `M ${this.source.x} ${sY} L ${this.target.x} ${tY}`;
         } else {
             const node1 = this.source.id < this.target.id ? this.source : this.target;
             const node2 = this.source.id < this.target.id ? this.target : this.source;
+            const n1vY = -node1.y;
+            const n2vY = -node2.y;
 
             const dx = node2.x - node1.x;
-            const dy = node2.y - node1.y;
+            const dy = n2vY - n1vY;
             const len = Math.sqrt(dx * dx + dy * dy) || 1;
             const px = -dy / len;
             const py = dx / len;
@@ -142,15 +147,15 @@ class GraphEdge {
             const step = 30;
             const offset = (index - (count - 1) / 2) * step;
             const bmx = (node1.x + node2.x) / 2;
-            const bmy = (node1.y + node2.y) / 2;
+            const bmy = (n1vY + n2vY) / 2;
 
             const cx = bmx + px * offset;
             const cy = bmy + py * offset;
 
-            d = `M ${this.source.x} ${this.source.y} Q ${cx} ${cy} ${this.target.x} ${this.target.y}`;
+            d = `M ${this.source.x} ${sY} Q ${cx} ${cy} ${this.target.x} ${tY}`;
             
             midX = 0.25 * this.source.x + 0.5 * cx + 0.25 * this.target.x;
-            midY = 0.25 * this.source.y + 0.5 * cy + 0.25 * this.target.y;
+            midY = 0.25 * sY + 0.5 * cy + 0.25 * tY;
         }
 
         this.element.setAttribute("d", d);
@@ -331,7 +336,14 @@ class Graph {
         this.edgeSourceNode = null;
         this.directedEdges = false;
         this.nextNodeName = "";
-        this.transform = { x: 0, y: 0, k: 1 };
+        
+        const rect = this.svg.getBoundingClientRect();
+        this.transform = { 
+            x: rect.width / 2, 
+            y: rect.height / 2, 
+            k: 1 
+        };
+        
         this.repulsion = 400;
         this.attraction = 0.01;
         this.edgeLength = 150;
@@ -346,8 +358,16 @@ class Graph {
         this.isWeighted = false;
         this.nodeCounter = 1;
         this.algorithms = new GraphAlgorithms(this);
+        this.centerGraph();
         this.initInteractions();
         this.animate();
+    }
+
+    centerGraph() {
+        const rect = this.svg.getBoundingClientRect();
+        this.transform.x = rect.width / 2;
+        this.transform.y = rect.height / 2;
+        this.updateViewport();
     }
 
     addNode(id, label, x, y) {
@@ -688,7 +708,7 @@ class Graph {
         const rect = this.svg.getBoundingClientRect();
         return {
             x: (clientX - rect.left - this.transform.x) / this.transform.k,
-            y: (clientY - rect.top - this.transform.y) / this.transform.k
+            y: -(clientY - rect.top - this.transform.y) / this.transform.k
         };
     }
 

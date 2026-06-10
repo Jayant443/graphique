@@ -630,6 +630,25 @@ select:focus-visible,
     background: #fff1f3 !important;
 }
 
+.viz-coords-overlay {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    color: var(--text-muted);
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 50;
+    transition: opacity 0.2s;
+}
+
 #graph-container {
     width: 100%;
     flex: 1;
@@ -801,15 +820,72 @@ select:focus-visible,
     font-style: italic;
 }
 
-.mode-addNode #graph-container {
+.mode-addNode .viz-coords-overlay {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    color: var(--text-muted);
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 50;
+    transition: opacity 0.2s;
+}
+
+#graph-container {
     cursor: crosshair;
 }
 
-.mode-addEdge #graph-container {
+.mode-addEdge .viz-coords-overlay {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    color: var(--text-muted);
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 50;
+    transition: opacity 0.2s;
+}
+
+#graph-container {
     cursor: cell;
 }
 
-.mode-select #graph-container {
+.mode-select .viz-coords-overlay {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    color: var(--text-muted);
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 50;
+    transition: opacity 0.2s;
+}
+
+#graph-container {
     cursor: grab;
 }
 
