@@ -329,6 +329,7 @@ class Graph {
         this.viewport = document.getElementById('viewport');
         this.edgesLayer = document.getElementById('edges-layer');
         this.nodesLayer = document.getElementById('nodes-layer');
+        this.createAxisLines();
         this.nodes = new Map();
         this.edges = [];
         this.mode = 'select';
@@ -368,6 +369,29 @@ class Graph {
         this.transform.x = rect.width / 2;
         this.transform.y = rect.height / 2;
         this.updateViewport();
+    }
+
+    createAxisLines() {
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        group.setAttribute("id", "axis-lines-layer");
+        
+        const xAxis = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        xAxis.setAttribute("class", "axis-line");
+        xAxis.setAttribute("x1", "-10000");
+        xAxis.setAttribute("y1", "0");
+        xAxis.setAttribute("x2", "10000");
+        xAxis.setAttribute("y2", "0");
+        
+        const yAxis = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        yAxis.setAttribute("class", "axis-line");
+        yAxis.setAttribute("x1", "0");
+        yAxis.setAttribute("y1", "-10000");
+        yAxis.setAttribute("x2", "0");
+        yAxis.setAttribute("y2", "10000");
+        
+        group.appendChild(xAxis);
+        group.appendChild(yAxis);
+        this.viewport.insertBefore(group, this.edgesLayer);
     }
 
     addNode(id, label, x, y) {

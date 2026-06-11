@@ -659,6 +659,13 @@ select:focus-visible,
     background-size: 22px 22px;
 }
 
+.axis-line {
+    stroke: #e0e4ef;
+    stroke-width: 1px;
+    stroke-dasharray: 4;
+    pointer-events: none;
+}
+
 .node {
     r: var(--node-radius);
     fill: var(--node-fill);
