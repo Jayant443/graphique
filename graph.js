@@ -36,7 +36,6 @@ class GraphNode {
 
     updatePosition() {
         if (this.element) {
-            // Invert Y for SVG transformation so positive Y is visually up
             this.element.setAttribute("transform", `translate(${this.x}, ${-this.y})`);
         }
     }
@@ -64,12 +63,12 @@ class GraphNode {
 }
 
 class GraphEdge {
-    constructor(source, target, isDirected = false) {
+    constructor(source, target, isDirected = false, weight = 1) {
         this.source = source;
         this.target = target;
         this.isDirected = isDirected;
-        this.weight = 1;
-        this.label = "1";
+        this.weight = Number(weight) || 1;
+        this.label = String(weight || "1");
         this.element = null;
         this.hitArea = null;
         this.group = null;
@@ -126,6 +125,8 @@ class GraphEdge {
         const sY = -this.source.y;
         const tY = -this.target.y;
 
+        if (isNaN(this.source.x) || isNaN(sY) || isNaN(this.target.x) || isNaN(tY)) return;
+
         let d;
         let midX = (this.source.x + this.target.x) / 2;
         let midY = (sY + tY) / 2;
@@ -133,8 +134,9 @@ class GraphEdge {
         if (count === 1) {
             d = `M ${this.source.x} ${sY} L ${this.target.x} ${tY}`;
         } else {
-            const node1 = this.source.id < this.target.id ? this.source : this.target;
-            const node2 = this.source.id < this.target.id ? this.target : this.source;
+            const isSourceFirst = this.source.id < this.target.id;
+            const node1 = isSourceFirst ? this.source : this.target;
+            const node2 = isSourceFirst ? this.target : this.source;
             const n1vY = -node1.y;
             const n2vY = -node2.y;
 
@@ -161,7 +163,7 @@ class GraphEdge {
         this.element.setAttribute("d", d);
         this.hitArea.setAttribute("d", d);
 
-        if (this.labelGroup) {
+        if (this.labelGroup && !isNaN(midX) && !isNaN(midY)) {
             this.labelGroup.setAttribute("transform", `translate(${midX}, ${midY})`);
             this.updateLabelElement();
         }
@@ -423,13 +425,13 @@ class Graph {
         this.notifyUpdate();
     }
 
-    addEdge(sourceId, targetId, isDirected = false) {
+    addEdge(sourceId, targetId, isDirected = false, weight = 1) {
         this.saveState();
         const source = this.nodes.get(sourceId);
         const target = this.nodes.get(targetId);
         if (!source || !target || source === target) return;
 
-        const edge = new GraphEdge(source, target, isDirected);
+        const edge = new GraphEdge(source, target, isDirected, weight);
         edge.createDOM(this.edgesLayer, this.isWeighted);
         
         edge.group.addEventListener('pointerdown', (e) => {
@@ -532,12 +534,7 @@ class Graph {
         }
         state.nodes.forEach(n => this.addNode(n.id, n.label, n.x, n.y));
         state.edges.forEach(e => {
-            const edge = this.addEdge(e.sourceId, e.targetId, e.isDirected);
-            if (edge) {
-                edge.weight = e.weight || 1;
-                edge.label = e.label || "1";
-                edge.updateLabelElement();
-            }
+            this.addEdge(e.sourceId, e.targetId, e.isDirected, e.weight);
         });
         this.isRestoring = false;
         this.wake();
@@ -850,11 +847,9 @@ class Graph {
     }
 
     getSiblings(edge) {
-        const node1 = edge.source.id < edge.target.id ? edge.source : edge.target;
-        const node2 = edge.source.id < edge.target.id ? edge.target : edge.source;
         return this.edges.filter(e => 
-            (e.source === node1 && e.target === node2) || 
-            (e.source === node2 && e.target === node1)
+            (e.source === edge.source && e.target === edge.target) || 
+            (e.source === edge.target && e.target === edge.source)
         );
     }
 
