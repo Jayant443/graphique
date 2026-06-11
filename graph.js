@@ -14,21 +14,28 @@ class GraphNode {
     createDOM(parentLayer) {
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         g.setAttribute("class", "node-group");
-        
+
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         circle.setAttribute("class", "node");
         circle.setAttribute("r", "15");
         circle.dataset.id = this.id;
-        
+
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("class", "node-label");
         text.setAttribute("dy", "5");
         text.textContent = this.label;
-        
+
         g.appendChild(circle);
         g.appendChild(text);
         parentLayer.appendChild(g);
-        
+
+        text.addEventListener('pointerdown', (e) => {
+            if (window.graphInstance && window.graphInstance.mode === 'select') {
+                e.stopPropagation();
+                window.graphInstance.showNodeLabelInput(this, e);
+            }
+        });
+
         this.element = g;
         this.circle = circle;
         this.updatePosition();
@@ -79,10 +86,10 @@ class GraphEdge {
     createDOM(parentLayer, isWeighted) {
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         g.setAttribute("class", "edge-group");
-        
+
         const hitArea = document.createElementNS("http://www.w3.org/2000/svg", "path");
         hitArea.setAttribute("class", "edge-hit-area");
-        
+
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path.setAttribute("class", `edge ${this.isDirected ? 'directed' : ''}`);
         if (this.isDirected) path.setAttribute('marker-end', 'url(#arrowhead)');
@@ -93,27 +100,27 @@ class GraphEdge {
         const lg = document.createElementNS("http://www.w3.org/2000/svg", "g");
         lg.setAttribute("class", "edge-label-group");
         lg.style.display = isWeighted ? 'block' : 'none';
-        
+
         const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         rect.setAttribute("class", "edge-label-bg");
         rect.setAttribute("rx", "4");
-        
+
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("class", "edge-label");
         text.textContent = this.label;
-        
+
         lg.appendChild(rect);
         lg.appendChild(text);
         g.appendChild(lg);
 
         parentLayer.appendChild(g);
-        
+
         this.element = path;
         this.hitArea = hitArea;
         this.group = g;
         this.labelGroup = lg;
         this.labelText = text;
-        
+
         this.updateLabelElement();
     }
 
@@ -155,7 +162,7 @@ class GraphEdge {
             const cy = bmy + py * offset;
 
             d = `M ${this.source.x} ${sY} Q ${cx} ${cy} ${this.target.x} ${tY}`;
-            
+
             midX = 0.25 * this.source.x + 0.5 * cx + 0.25 * this.target.x;
             midY = 0.25 * sY + 0.5 * cy + 0.25 * tY;
         }
@@ -188,7 +195,7 @@ class GraphEdge {
                     rect.setAttribute("width", bbox.width + 8);
                     rect.setAttribute("height", bbox.height + 4);
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 
@@ -297,11 +304,11 @@ class GraphLogic {
                 }
             }
         }
-        
+
         const isConnected = visited.size === nodes.length;
-        const isTree = isConnected && 
-                       edges.length === nodes.length - 1 && 
-                       !this.hasCycle(nodes, edges, isDirectedMode);
+        const isTree = isConnected &&
+            edges.length === nodes.length - 1 &&
+            !this.hasCycle(nodes, edges, isDirectedMode);
 
         if (!isTree) return { isTree: false };
 
@@ -339,14 +346,14 @@ class Graph {
         this.edgeSourceNode = null;
         this.directedEdges = false;
         this.nextNodeName = "";
-        
+
         const rect = this.svg.getBoundingClientRect();
-        this.transform = { 
-            x: rect.width / 2, 
-            y: rect.height / 2, 
-            k: 1 
+        this.transform = {
+            x: rect.width / 2,
+            y: rect.height / 2,
+            k: 1
         };
-        
+
         this.repulsion = 400;
         this.attraction = 0.01;
         this.edgeLength = 150;
@@ -361,6 +368,7 @@ class Graph {
         this.isWeighted = false;
         this.nodeCounter = 1;
         this.algorithms = new GraphAlgorithms(this);
+        window.graphInstance = this;
         this.centerGraph();
         this.initInteractions();
         this.animate();
@@ -376,30 +384,44 @@ class Graph {
     createAxisLines() {
         const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
         group.setAttribute("id", "axis-lines-layer");
-        
+
         const xAxis = document.createElementNS("http://www.w3.org/2000/svg", "line");
         xAxis.setAttribute("class", "axis-line");
         xAxis.setAttribute("x1", "-10000");
         xAxis.setAttribute("y1", "0");
         xAxis.setAttribute("x2", "10000");
         xAxis.setAttribute("y2", "0");
-        
+
         const yAxis = document.createElementNS("http://www.w3.org/2000/svg", "line");
         yAxis.setAttribute("class", "axis-line");
         yAxis.setAttribute("x1", "0");
         yAxis.setAttribute("y1", "-10000");
         yAxis.setAttribute("x2", "0");
         yAxis.setAttribute("y2", "10000");
-        
+
         group.appendChild(xAxis);
         group.appendChild(yAxis);
         this.viewport.insertBefore(group, this.edgesLayer);
     }
 
+    isNodeNameUnique(name, excludeId = null) {
+        for (const node of this.nodes.values()) {
+            if (node.id !== excludeId && node.label === name) return false;
+        }
+        return true;
+    }
+
     addNode(id, label, x, y) {
         if (this.nodes.has(id)) return;
+        
+        let uniqueLabel = label;
+        let counter = 1;
+        while (!this.isNodeNameUnique(uniqueLabel)) {
+            uniqueLabel = `${label}_${counter++}`;
+        }
+
         this.saveState();
-        const node = new GraphNode(id, label, x, y);
+        const node = new GraphNode(id, uniqueLabel, x, y);
         node.createDOM(this.nodesLayer);
         this.nodes.set(id, node);
         this.wake();
@@ -411,7 +433,7 @@ class Graph {
         this.saveState();
         const node = this.nodes.get(id);
         if (!node) return;
-        
+
         this.edges = this.edges.filter(edge => {
             if (edge.source === node || edge.target === node) {
                 edge.remove();
@@ -419,7 +441,7 @@ class Graph {
             }
             return true;
         });
-        
+
         node.remove();
         this.nodes.delete(id);
         this.notifyUpdate();
@@ -433,7 +455,7 @@ class Graph {
 
         const edge = new GraphEdge(source, target, isDirected, weight);
         edge.createDOM(this.edgesLayer, this.isWeighted);
-        
+
         edge.group.addEventListener('pointerdown', (e) => {
             if (this.mode === 'select') {
                 e.stopPropagation();
@@ -444,10 +466,7 @@ class Graph {
         edge.labelGroup.addEventListener('pointerdown', (e) => {
             if (this.mode === 'select') {
                 e.stopPropagation();
-                const newVal = prompt("Enter edge weight:", edge.label);
-                if (newVal !== null) {
-                    this.updateEdgeLabel(edge, newVal);
-                }
+                this.showEdgeWeightInput(edge, e);
             }
         });
 
@@ -461,7 +480,7 @@ class Graph {
         this.saveState();
         this.edges = this.edges.filter(edge => {
             const match = (edge.source.id === sourceId && edge.target.id === targetId) ||
-                        (!edge.isDirected && edge.source.id === targetId && edge.target.id === sourceId);
+                (!edge.isDirected && edge.source.id === targetId && edge.target.id === sourceId);
             if (match) {
                 edge.remove();
                 return false;
@@ -544,7 +563,7 @@ class Graph {
     saveState() {
         if (this.isRestoring) return;
         const state = JSON.stringify(this.serialize());
-        if (this.undoStack.length > 0 && this.undoStack[this.undoStack.length-1] === state) return;
+        if (this.undoStack.length > 0 && this.undoStack[this.undoStack.length - 1] === state) return;
         this.undoStack.push(state);
         this.redoStack = [];
         if (this.undoStack.length > 50) this.undoStack.shift();
@@ -619,10 +638,68 @@ class Graph {
     updateNodeLabel(id, newLabel) {
         const node = this.nodes.get(id);
         if (node) {
+            if (!this.isNodeNameUnique(newLabel, id)) {
+                alert(`The name "${newLabel}" is already in use. Please choose a unique name.`);
+                if (this.selectedElement && this.selectedElement.type === 'node' && this.selectedElement.data.id === id) {
+                    const nameInput = document.getElementById('input-node-name');
+                    if (nameInput) nameInput.value = node.label;
+                }
+                return;
+            }
+
             this.saveState();
             node.updateLabel(newLabel);
             this.notifyUpdate();
+            if (this.selectedElement && this.selectedElement.type === 'node' && this.selectedElement.data.id === id) {
+                const nameInput = document.getElementById('input-node-name');
+                if (nameInput) nameInput.value = newLabel;
+            }
         }
+    }
+
+    showNodeLabelInput(node, event) {
+        document.querySelectorAll('.node-label-input').forEach(el => el.remove());
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = node.label;
+        input.className = 'node-label-input';
+
+        const matrix = node.element.getScreenCTM();
+        const pt = this.svg.createSVGPoint();
+        pt.x = 0;
+        pt.y = 0;
+        const screenPt = pt.matrixTransform(matrix);
+
+        input.style.left = `${screenPt.x}px`;
+        input.style.top = `${screenPt.y}px`;
+
+        document.body.appendChild(input);
+
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 10);
+
+        const save = () => {
+            if (!input.parentElement) return;
+            const newVal = input.value.trim();
+            if (newVal !== node.label && newVal !== "") {
+                this.updateNodeLabel(node.id, newVal);
+            }
+            input.remove();
+        };
+
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                save();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                input.remove();
+            }
+        });
     }
 
     updateEdgeLabel(edge, newVal) {
@@ -637,6 +714,51 @@ class Graph {
         edge.setDirected(isDirected);
         this.notifyUpdate();
         this.wake();
+    }
+
+    showEdgeWeightInput(edge, event) {
+        document.querySelectorAll('.edge-weight-input').forEach(el => el.remove());
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = edge.label;
+        input.className = 'edge-weight-input';
+
+        const matrix = edge.labelGroup.getScreenCTM();
+        const pt = this.svg.createSVGPoint();
+        pt.x = 0;
+        pt.y = 0;
+        const screenPt = pt.matrixTransform(matrix);
+
+        input.style.left = `${screenPt.x}px`;
+        input.style.top = `${screenPt.y}px`;
+
+        document.body.appendChild(input);
+
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 10);
+
+        const save = () => {
+            if (!input.parentElement) return;
+            const newVal = input.value.trim();
+            if (newVal !== edge.label && newVal !== "") {
+                this.updateEdgeLabel(edge, newVal);
+            }
+            input.remove();
+        };
+
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                save();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                input.remove();
+            }
+        });
     }
 
     initInteractions() {
@@ -788,7 +910,7 @@ class Graph {
                 const siblings = this.getSiblings(edge);
                 edge.updatePosition(siblings);
             });
-            
+
             if (this.onAnimationStep) {
                 this.onAnimationStep(Array.from(this.nodes.values()));
             }
@@ -847,8 +969,8 @@ class Graph {
     }
 
     getSiblings(edge) {
-        return this.edges.filter(e => 
-            (e.source === edge.source && e.target === edge.target) || 
+        return this.edges.filter(e =>
+            (e.source === edge.source && e.target === edge.target) ||
             (e.source === edge.target && e.target === edge.source)
         );
     }

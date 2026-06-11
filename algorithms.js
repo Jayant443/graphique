@@ -82,7 +82,7 @@ class GraphAlgorithms {
 
         const { nodes: nodesArr, adjList } = this.graph.getGraphData();
         const V = nodesArr.length;
-        
+
         const idToIndex = new Map();
         const indexToNode = [];
         nodesArr.forEach((node, i) => {
@@ -104,7 +104,7 @@ class GraphAlgorithms {
             const queue = indexToNode
                 .filter((node, i) => !visited[i] && dist[i] !== Infinity)
                 .map(node => node.label);
-            
+
             return {
                 queue: queue,
                 pq: queue,
@@ -128,11 +128,11 @@ class GraphAlgorithms {
             }
 
             if (u === -1 || dist[u] === Infinity) break;
-            
+
             const uNode = indexToNode[u];
             visited[u] = true;
             order.push(uNode);
-            
+
             uNode.element.querySelector('.node').classList.add('processing');
             if (onStep) onStep(getVizState(u));
 
@@ -150,7 +150,7 @@ class GraphAlgorithms {
                     const alt = dist[u] + neighbor.weight;
                     if (alt < dist[v]) {
                         dist[v] = alt;
-                        
+
                         const vNode = indexToNode[v];
                         const edge = this.graph.edges.find(e =>
                             (e.source.id === uNode.id && e.target.id === vNode.id) ||
