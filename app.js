@@ -31,8 +31,61 @@ const buttons = {
     vizStructureLabel: document.getElementById('viz-structure-label'),
     vizDistancesSection: document.getElementById('viz-distances-section'),
     vizDistances: document.getElementById('viz-distances'),
-    coords: document.getElementById('viz-coords')
+    coords: document.getElementById('viz-coords'),
+    customAlgoInputs: document.getElementById('custom-algo-inputs'),
+    customSequenceContainer: document.getElementById('custom-sequence-container'),
+    btnClearSequence: document.getElementById('btn-clear-sequence'),
+    btnToggleViz: document.getElementById('btn-toggle-viz'),
+    app: document.getElementById('app'),
+    vizAnalysisResults: document.getElementById('viz-analysis-results'),
+    analysisEulerPath: document.getElementById('analysis-euler-path'),
+    analysisEulerCircuit: document.getElementById('analysis-euler-circuit'),
+    analysisHamiltonianPath: document.getElementById('analysis-hamiltonian-path'),
+    analysisHamiltonianCircuit: document.getElementById('analysis-hamiltonian-circuit')
 };
+
+let customSequence = [];
+
+function updateSequenceUI() {
+    if (!buttons.customSequenceContainer) return;
+
+    if (customSequence.length === 0) {
+        buttons.customSequenceContainer.innerHTML = '<div class="empty-chips-hint">Click nodes on graph to add to sequence</div>';
+        buttons.runAlgo.disabled = true;
+        return;
+    }
+
+    buttons.runAlgo.disabled = false;
+    buttons.customSequenceContainer.innerHTML = customSequence.map((nodeId, index) => {
+        const node = graph.nodes.get(nodeId);
+        const label = node ? node.label : nodeId;
+        return `
+            <div class="node-chip" data-index="${index}">
+                <span>${label}</span>
+                <span class="remove-chip" onclick="removeNodeFromSequence(${index}, event)">×</span>
+            </div>
+        `;
+    }).join('');
+}
+
+window.removeNodeFromSequence = (index, event) => {
+    if (event) event.stopPropagation();
+    customSequence.splice(index, 1);
+    updateSequenceUI();
+};
+
+buttons.btnClearSequence.addEventListener('click', () => {
+    customSequence = [];
+    graph.clearHighlights();
+    updateSequenceUI();
+    buttons.vizQueue.innerHTML = '<div class="empty-state">Empty</div>';
+    buttons.vizOrder.innerHTML = '<div class="empty-state">No nodes visited</div>';
+    buttons.vizAnalysisResults.style.display = 'none';
+});
+
+buttons.btnToggleViz.addEventListener('click', () => {
+    buttons.app.classList.toggle('viz-hidden');
+});
 
 function setActiveButton(activeId) {
     Object.entries(buttons).forEach(([id, btn]) => {
@@ -252,7 +305,7 @@ buttons.download.addEventListener('click', () => {
 
         y += 20;
 
-        if (buttons.vizPanel.classList.contains('active')) {
+        if (!buttons.app.classList.contains('viz-hidden')) {
             ctx.fillStyle = '#5b5bd6';
             ctx.font = 'bold 13px sans-serif';
             ctx.fillText(buttons.vizAlgoName.textContent, width + padding, y);
@@ -480,24 +533,32 @@ buttons.algoSelect.addEventListener('change', () => {
     buttons.runAlgo.style.display = 'block';
     buttons.stopAlgo.style.display = 'none';
     buttons.pauseAlgo.style.display = 'none';
+    buttons.customAlgoInputs.style.display = val === 'custom' ? 'block' : 'none';
 
-    buttons.runAlgo.disabled = (val === 'none' || !graph.selectedElement || graph.selectedElement.type !== 'node');
-    if (val === 'none') {
-        buttons.vizPanel.classList.remove('active');
-        graph.clearHighlights();
+    if (val === 'custom') {
+        buttons.runAlgo.disabled = customSequence.length === 0;
+        buttons.vizAlgoName.textContent = 'Custom Traversal State';
+        buttons.vizStructureLabel.textContent = 'Current Sequence';
+        buttons.vizDistancesSection.style.display = 'none';
+        updateSequenceUI();
     } else {
-        if (val === 'bfs') {
-            buttons.vizAlgoName.textContent = 'BFS State';
-            buttons.vizStructureLabel.textContent = 'Queue';
-            buttons.vizDistancesSection.style.display = 'none';
-        } else if (val === 'dfs') {
-            buttons.vizAlgoName.textContent = 'DFS State';
-            buttons.vizStructureLabel.textContent = 'Recursion Stack';
-            buttons.vizDistancesSection.style.display = 'none';
-        } else if (val === 'dijkstra') {
-            buttons.vizAlgoName.textContent = 'Dijkstra State';
-            buttons.vizStructureLabel.textContent = 'Queue';
-            buttons.vizDistancesSection.style.display = 'block';
+        buttons.runAlgo.disabled = (val === 'none' || !graph.selectedElement || graph.selectedElement.type !== 'node');
+        if (val === 'none') {
+            graph.clearHighlights();
+        } else {
+            if (val === 'bfs') {
+                buttons.vizAlgoName.textContent = 'BFS State';
+                buttons.vizStructureLabel.textContent = 'Queue';
+                buttons.vizDistancesSection.style.display = 'none';
+            } else if (val === 'dfs') {
+                buttons.vizAlgoName.textContent = 'DFS State';
+                buttons.vizStructureLabel.textContent = 'Recursion Stack';
+                buttons.vizDistancesSection.style.display = 'none';
+            } else if (val === 'dijkstra') {
+                buttons.vizAlgoName.textContent = 'Dijkstra State';
+                buttons.vizStructureLabel.textContent = 'Queue';
+                buttons.vizDistancesSection.style.display = 'block';
+            }
         }
     }
 });
@@ -507,19 +568,20 @@ buttons.runAlgo.addEventListener('click', async () => {
 
     const algo = buttons.algoSelect.value;
 
-    if (!graph.selectedElement || graph.selectedElement.type !== 'node') return;
+    if (algo !== 'custom' && (!graph.selectedElement || graph.selectedElement.type !== 'node')) return;
+    if (algo === 'custom' && customSequence.length === 0) return;
 
     isAlgoRunning = true;
     buttons.runAlgo.style.display = 'none';
     buttons.stopAlgo.style.display = 'block';
     buttons.pauseAlgo.style.display = 'block';
     buttons.pauseAlgo.textContent = 'Pause';
-    buttons.vizPanel.classList.add('active');
 
-    const startNode = graph.selectedElement.data;
+    const startNode = algo !== 'custom' ? graph.selectedElement.data : null;
 
     const updateViz = (state) => {
-        const startLabel = startNode.label;
+        const startLabel = startNode ? startNode.label : (customSequence.length > 0 ? graph.nodes.get(customSequence[0]).label : '');
+        
         if (algo === 'dijkstra') {
             buttons.vizQueue.innerHTML = state.pq && state.pq.length > 0
                 ? state.pq.map(label => `<span class="viz-node ${label === startLabel ? 'source' : ''}">${label}</span>`).join('')
@@ -532,6 +594,27 @@ buttons.runAlgo.addEventListener('click', async () => {
                         <span class="viz-dist-val">${dist}</span>
                     </div>`).join('')
                 : '<div class="empty-state">No distances calculated</div>';
+        } else if (algo === 'custom') {
+            buttons.vizQueue.innerHTML = state.order && state.order.length > 0
+                ? state.order.map(label => `<span class="viz-node ${label === startLabel ? 'source' : ''}">${label}</span>`).join('')
+                : `<div class="empty-state">Sequence is empty</div>`;
+            
+            if (state.analysis) {
+                const a = state.analysis;
+                buttons.vizAnalysisResults.style.display = 'block';
+                
+                const updateItem = (el, val) => {
+                    el.textContent = val ? 'Yes' : 'No';
+                    el.className = `analysis-value ${val ? 'yes' : 'no'}`;
+                };
+
+                updateItem(buttons.analysisEulerPath, a.isEulerPath);
+                updateItem(buttons.analysisEulerCircuit, a.isEulerCircuit);
+                updateItem(buttons.analysisHamiltonianPath, a.isHamiltonianPath);
+                updateItem(buttons.analysisHamiltonianCircuit, a.isHamiltonianCircuit);
+            } else {
+                buttons.vizAnalysisResults.style.display = 'none';
+            }
         } else {
             buttons.vizQueue.innerHTML = state.queue && state.queue.length > 0
                 ? state.queue.map(label => `<span class="viz-node ${label === startLabel ? 'source' : ''}">${label}</span>`).join('')
@@ -551,6 +634,8 @@ buttons.runAlgo.addEventListener('click', async () => {
         await graph.algorithms.runDFS(startNode.id, updateViz);
     } else if (algo === 'dijkstra') {
         await graph.algorithms.runDijkstra(startNode.id, updateViz);
+    } else if (algo === 'custom') {
+        await graph.algorithms.runCustomTraversal(customSequence, updateViz);
     }
 
     if (isAlgoRunning) {
@@ -585,7 +670,13 @@ graph.onSelectionChange = (selection) => {
     if (selection && selection.type === 'node') {
         document.body.classList.add('selection-node');
         buttons.nodeNameInput.value = selection.data.label;
-        if (buttons.algoSelect.value !== 'none') buttons.runAlgo.disabled = false;
+        
+        if (buttons.algoSelect.value === 'custom') {
+            customSequence.push(selection.data.id);
+            updateSequenceUI();
+        } else if (buttons.algoSelect.value !== 'none') {
+            buttons.runAlgo.disabled = false;
+        }
     } else if (selection && selection.type === 'edge') {
         document.body.classList.add('selection-edge');
         buttons.directed.checked = selection.data.isDirected;
@@ -593,7 +684,9 @@ graph.onSelectionChange = (selection) => {
         buttons.runAlgo.disabled = true;
     } else {
         buttons.nodeNameInput.value = graph.nextNodeName;
-        buttons.runAlgo.disabled = true;
+        if (buttons.algoSelect.value !== 'custom') {
+            buttons.runAlgo.disabled = true;
+        }
     }
 };
 

@@ -101,9 +101,7 @@ class GraphAlgorithms {
             indexToNode.forEach((node, i) => {
                 distances[node.label] = dist[i] === Infinity ? '∞' : dist[i];
             });
-            const queue = indexToNode
-                .filter((node, i) => !visited[i] && dist[i] !== Infinity)
-                .map(node => node.label);
+            const queue = indexToNode.filter((node, i) => !visited[i] && dist[i] !== Infinity).map(node => node.label);
 
             return {
                 queue: queue,
@@ -230,5 +228,124 @@ class GraphAlgorithms {
 
         await dfs(startNode);
         this.graph.algoController = null;
+    }
+
+    async runCustomTraversal(sequenceIds, onStep) {
+        this.graph.clearHighlights();
+        if (sequenceIds.length === 0) return;
+
+        const controller = { aborted: false, paused: false };
+        this.graph.algoController = controller;
+
+        const order = [];
+        const visitedNodes = new Set();
+
+        for (let i = 0; i < sequenceIds.length; i++) {
+            await this.waitIfPaused(controller);
+            if (controller.aborted) break;
+
+            const nodeId = sequenceIds[i];
+            const node = this.graph.nodes.get(nodeId);
+            if (!node) continue;
+
+            node.element.querySelector('.node').classList.add('processing');
+            order.push(node);
+
+            if (onStep) onStep({
+                order: order.map(n => n.label),
+                currentNode: node.label
+            });
+
+            await new Promise(r => setTimeout(r, 600));
+            await this.waitIfPaused(controller);
+            if (controller.aborted) break;
+
+            node.element.querySelector('.node').classList.remove('processing');
+            node.element.querySelector('.node').classList.add('visited');
+            visitedNodes.add(nodeId);
+
+            if (i > 0) {
+                const prevNodeId = sequenceIds[i - 1];
+                const prevNode = this.graph.nodes.get(prevNodeId);
+                const edge = this.graph.edges.find(e =>
+                    (e.source.id === prevNodeId && e.target.id === nodeId) ||
+                    (!e.isDirected && e.source.id === nodeId && e.target.id === prevNodeId)
+                );
+                if (edge) edge.element.classList.add('traversed');
+            }
+
+            if (onStep) onStep({
+                order: order.map(n => n.label),
+                currentNode: node.label
+            });
+
+            await new Promise(r => setTimeout(r, 400));
+        }
+
+        const analysis = this.analyzePath(sequenceIds);
+        if (onStep) onStep({
+            order: order.map(n => n.label),
+            currentNode: null,
+            analysis: analysis
+        });
+
+        this.graph.algoController = null;
+    }
+
+    analyzePath(sequenceIds) {
+        if (sequenceIds.length === 0) return null;
+
+        const { nodes, edges, adjList } = this.graph.getGraphData();
+        const nodeSet = new Set(nodes.map(n => n.id));
+        const edgeSet = new Set();
+
+        const getEdgeKey = (u, v, directed) => {
+            if (directed) return `${u}->${v}`;
+            return [u, v].sort().join('--');
+        };
+
+        const pathEdges = [];
+        let isValidPath = true;
+
+        for (let i = 0; i < sequenceIds.length - 1; i++) {
+            const u = sequenceIds[i];
+            const v = sequenceIds[i + 1];
+            const edge = this.graph.edges.find(e => (e.source.id === u && e.target.id === v) || (!e.isDirected && e.source.id === v && e.target.id === u));
+            if (!edge) {
+                isValidPath = false;
+                break;
+            }
+            pathEdges.push(edge);
+        }
+
+        if (!isValidPath) return null;
+
+        const allEdgesKeys = new Set();
+        this.graph.edges.forEach(e => {
+            allEdgesKeys.add(getEdgeKey(e.source.id, e.target.id, e.isDirected));
+        });
+
+        const usedEdgesKeys = new Set();
+        pathEdges.forEach(e => {
+            usedEdgesKeys.add(getEdgeKey(e.source.id, e.target.id, e.isDirected));
+        });
+
+        const visitedNodes = new Set(sequenceIds);
+        const isEulerPath = usedEdgesKeys.size === allEdgesKeys.size && pathEdges.length === this.graph.edges.length;
+        const isEulerCircuit = isEulerPath && sequenceIds[0] === sequenceIds[sequenceIds.length - 1];
+
+        const isHamiltonianPath = visitedNodes.size === nodes.length && sequenceIds.length === nodes.length;
+        const isHamiltonianCircuit = visitedNodes.size === nodes.length && sequenceIds.length === nodes.length + 1 && sequenceIds[0] === sequenceIds[sequenceIds.length - 1];
+
+        if (isEulerPath || isEulerCircuit || isHamiltonianPath || isHamiltonianCircuit) {
+            return {
+                isEulerPath,
+                isEulerCircuit,
+                isHamiltonianPath,
+                isHamiltonianCircuit
+            };
+        }
+
+        return null;
     }
 }

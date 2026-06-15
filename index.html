@@ -28,8 +28,16 @@
                             <option value="bfs">Breadth-First Search (BFS)</option>
                             <option value="dfs">Depth-First Search (DFS)</option>
                             <option value="dijkstra">Dijkstra's Algorithm</option>
+                            <option value="custom">Custom Traversal</option>
                         </select>
-                        <button id="btn-run-algo" class="algo-btn" disabled>Run Algorithm</button>
+                        <div id="custom-algo-inputs" style="display: none;">
+                            <label class="input-label">Node Sequence</label>
+                            <div id="custom-sequence-container" class="sequence-chips-container">
+                                <div class="empty-chips-hint">Click nodes on graph to add to sequence</div>
+                            </div>
+                            <button id="btn-clear-sequence" class="algo-btn danger">Clear Sequence</button>
+                        </div>
+                        <button id="btn-run-algo" class="algo-btn" disabled>Run</button>
                         <button id="btn-stop-algo" class="algo-btn danger">Stop</button>
                         <button id="btn-pause-algo" class="algo-btn">Pause</button>
                     </div>
@@ -222,6 +230,12 @@
             <div id="viz-coords" class="viz-coords-overlay">X: 0, Y: 0</div>
         </main>
 
+        <button id="btn-toggle-viz" class="side-panel-toggle" title="Toggle Visualization Panel">
+            <svg viewBox="0 0 24 24" width="18" height="18">
+                <path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+            </svg>
+        </button>
+
         <aside id="viz-panel" class="side-panel-right">
             <header class="panel-section-header">
                 <h3>Visualization</h3>
@@ -231,6 +245,24 @@
                 <h4 id="viz-structure-label">Structure</h4>
                 <div class="panel-card viz-card" id="viz-queue">
                     <div class="empty-state">Empty</div>
+                </div>
+                <div id="viz-analysis-results" class="panel-card viz-analysis-card" style="display: none;">
+                    <div class="analysis-item">
+                        <span class="analysis-label">Euler Path</span>
+                        <span id="analysis-euler-path" class="analysis-value">No</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="analysis-label">Euler Circuit</span>
+                        <span id="analysis-euler-circuit" class="analysis-value">No</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="analysis-label">Hamiltonian Path</span>
+                        <span id="analysis-hamiltonian-path" class="analysis-value">No</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="analysis-label">Hamiltonian Circuit</span>
+                        <span id="analysis-hamiltonian-circuit" class="analysis-value">No</span>
+                    </div>
                 </div>
             </div>
             <div class="panel-section">
