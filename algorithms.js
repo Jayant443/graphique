@@ -334,8 +334,8 @@ class GraphAlgorithms {
         const isEulerPath = usedEdgesKeys.size === allEdgesKeys.size && pathEdges.length === this.graph.edges.length;
         const isEulerCircuit = isEulerPath && sequenceIds[0] === sequenceIds[sequenceIds.length - 1];
 
-        const isHamiltonianPath = visitedNodes.size === nodes.length && sequenceIds.length === nodes.length;
         const isHamiltonianCircuit = visitedNodes.size === nodes.length && sequenceIds.length === nodes.length + 1 && sequenceIds[0] === sequenceIds[sequenceIds.length - 1];
+        const isHamiltonianPath = (visitedNodes.size === nodes.length && sequenceIds.length === nodes.length) || isHamiltonianCircuit;
 
         if (isEulerPath || isEulerCircuit || isHamiltonianPath || isHamiltonianCircuit) {
             return {
