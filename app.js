@@ -415,7 +415,7 @@ graph.onGraphUpdate = (data) => {
 
     graph.edges.forEach(edge => {
         if (edge.labelGroup) {
-            edge.labelGroup.style.display = (graph.isWeighted && !isTree) ? 'block' : 'none';
+            edge.labelGroup.style.display = graph.isWeighted ? 'block' : 'none';
         }
     });
 };
@@ -733,7 +733,7 @@ const defaultData = {
         { "sourceId": "6", "targetId": "7", "isDirected": false, "weight": 4 }
     ],
     "settings": {
-        "physics": { "repulsion": 400, "attraction": 0.01, "edgeLength": 100, "damping": 0.7 },
+        "physics": { "repulsion": 400, "attraction": 0.01, "edgeLength": 200, "damping": 0.7 },
         "directedEdges": false, "nextNodeName": "", "isWeighted": true
     }
 };

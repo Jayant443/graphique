@@ -17,7 +17,7 @@ class GraphNode {
 
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         circle.setAttribute("class", "node");
-        circle.setAttribute("r", "15");
+        circle.setAttribute("r", "25");
         circle.dataset.id = this.id;
 
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -356,7 +356,7 @@ class Graph {
 
         this.repulsion = 400;
         this.attraction = 0.01;
-        this.edgeLength = 150;
+        this.edgeLength = 200;
         this.damping = 0.7;
         this.isSleeping = false;
         this.energyThreshold = 0.01;
@@ -942,15 +942,11 @@ class Graph {
             }
         }
 
-        const treeInfo = GraphLogic.analyzeTree(nodesArr, this.edges, this.directedEdges);
-        const isTree = treeInfo.isTree;
-
         this.edges.forEach(edge => {
             const dx = edge.target.x - edge.source.x;
             const dy = edge.target.y - edge.source.y;
             const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-            const weight = edge.weight || 1;
-            const targetLength = (this.isWeighted && !isTree) ? this.edgeLength * Math.max(0.1, weight) : this.edgeLength;
+            const targetLength = this.edgeLength;
             const force = (dist - targetLength) * this.attraction;
             const fx = (dx / dist) * force;
             const fy = (dy / dist) * force;
