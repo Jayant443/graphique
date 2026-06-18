@@ -11,6 +11,11 @@
 
 <body>
     <div id="app">
+        <button id="btn-toggle-side" class="side-panel-toggle-left" title="Toggle Side Panel">
+            <svg viewBox="0 0 24 24" width="18" height="18">
+                <path fill="currentColor" d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z" />
+            </svg>
+        </button>
         <aside id="side-panel">
             <header class="panel-section-header">
                 <div class="brand-copy">
@@ -63,65 +68,60 @@
 
         <main id="main-content">
             <div id="toolbar">
-                <div class="toolbar-group">
-                    <button id="btn-select" class="active" title="Select & Move (S)">
-                        <svg viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="currentColor" d="M7 2l12 11.2l-5.8 0.5l3.3 7.3l-2.2 1l-3.2-7.4L7 18.5V2z" />
-                        </svg>
-                        <span>Select</span>
-                    </button>
-                    <button id="btn-add-node" title="Add Node (N)">
-                        <svg viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="currentColor"
-                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-                        </svg>
-                        <span>Node</span>
-                    </button>
-                    <button id="btn-add-edge" title="Add Edge (E)">
-                        <svg viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="currentColor" d="M16.01 11H4v2h12.01v3L20 12l-3.99-4v3z" />
-                        </svg>
-                        <span>Edge</span>
-                    </button>
-                </div>
-
-                <div class="separator node-name-control"></div>
-
-                <div class="toolbar-group node-name-control">
-                    <div class="toolbar-control">
-                        <label>Name</label>
-                        <input type="text" id="input-node-name" placeholder="Node label">
+                <div class="toolbar-tools">
+                    <div class="toolbar-group">
+                        <button id="btn-add-node" title="Add Node (N)">
+                            <svg viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="currentColor"
+                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
+                            </svg>
+                            <span>Node</span>
+                        </button>
+                        <button id="btn-add-edge" title="Add Edge (E)">
+                            <svg viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="currentColor" d="M16.01 11H4v2h12.01v3L20 12l-3.99-4v3z" />
+                            </svg>
+                            <span>Edge</span>
+                        </button>
                     </div>
-                </div>
 
-                <div class="toolbar-group directed-control">
-                    <div class="toolbar-control">
-                        <label>Directed</label>
-                        <input type="checkbox" id="check-directed">
+                    <div class="separator node-name-control"></div>
+
+                    <div class="toolbar-group node-name-control">
+                        <div class="toolbar-control">
+                            <label>Name</label>
+                            <input type="text" id="input-node-name" placeholder="Node label">
+                        </div>
                     </div>
-                </div>
 
-                <div class="separator"></div>
-
-                <div class="toolbar-group">
-                    <div class="toolbar-control">
-                        <select id="select-graph-type">
-                            <option value="unweighted">Unweighted</option>
-                            <option value="weighted">Weighted</option>
-                        </select>
+                    <div class="toolbar-group directed-control">
+                        <div class="toolbar-control">
+                            <label>Directed</label>
+                            <input type="checkbox" id="check-directed">
+                        </div>
                     </div>
-                </div>
 
-                <div class="separator"></div>
+                    <div class="separator"></div>
+
+                    <div class="toolbar-group">
+                        <div class="toolbar-control">
+                            <select id="select-graph-type">
+                                <option value="unweighted">Unweighted</option>
+                                <option value="weighted">Weighted</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="separator"></div>
+                </div>
 
                 <div class="toolbar-group toolbar-group-right">
                     <div class="dropdown-container">
                         <button id="btn-more" title="More Options">
                             <svg viewBox="0 0 24 24" width="18" height="18">
                                 <path fill="currentColor"
-                                    d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                                    d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2 s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
                             </svg>
-                            <span>More</span>
                         </button>
                         <div id="more-options-menu" class="dropdown-menu">
                             <div class="menu-section">

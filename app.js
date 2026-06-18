@@ -1,6 +1,5 @@
 const graph = new Graph('graph-container');
 const buttons = {
-    select: document.getElementById('btn-select'),
     addNode: document.getElementById('btn-add-node'),
     addEdge: document.getElementById('btn-add-edge'),
     delete: document.getElementById('btn-delete'),
@@ -36,6 +35,7 @@ const buttons = {
     customSequenceContainer: document.getElementById('custom-sequence-container'),
     btnClearSequence: document.getElementById('btn-clear-sequence'),
     btnToggleViz: document.getElementById('btn-toggle-viz'),
+    btnToggleSide: document.getElementById('btn-toggle-side'),
     app: document.getElementById('app'),
     vizAnalysisResults: document.getElementById('viz-analysis-results'),
     analysisEulerPath: document.getElementById('analysis-euler-path'),
@@ -43,6 +43,8 @@ const buttons = {
     analysisHamiltonianPath: document.getElementById('analysis-hamiltonian-path'),
     analysisHamiltonianCircuit: document.getElementById('analysis-hamiltonian-circuit')
 };
+
+let currentMode = 'select';
 
 let customSequence = [];
 
@@ -84,8 +86,64 @@ buttons.btnClearSequence.addEventListener('click', () => {
 });
 
 buttons.btnToggleViz.addEventListener('click', () => {
-    buttons.app.classList.toggle('viz-hidden');
+    if (window.innerWidth <= 768) {
+        if (buttons.app.classList.contains('viz-expanded')) {
+            buttons.app.classList.remove('viz-expanded');
+            buttons.app.classList.add('viz-peek');
+        } else if (buttons.app.classList.contains('viz-peek')) {
+            buttons.app.classList.remove('viz-peek');
+            buttons.app.classList.add('viz-expanded');
+        } else {
+            buttons.app.classList.remove('viz-hidden');
+            buttons.app.classList.add('viz-peek');
+        }
+    } else {
+        buttons.app.classList.toggle('viz-hidden');
+        if (!buttons.app.classList.contains('viz-hidden')) {
+            buttons.app.classList.add('side-hidden');
+        }
+    }
 });
+
+buttons.btnToggleSide.addEventListener('click', () => {
+    buttons.app.classList.toggle('side-hidden');
+    if (!buttons.app.classList.contains('side-hidden')) {
+        buttons.app.classList.add('viz-hidden');
+    }
+});
+
+function checkMobileLayout() {
+    if (window.innerWidth <= 1024) {
+        buttons.app.classList.add('side-hidden');
+        buttons.app.classList.add('viz-hidden');
+    }
+}
+window.addEventListener('resize', checkMobileLayout);
+checkMobileLayout();
+
+let touchStartY = 0;
+buttons.vizPanel.addEventListener('touchstart', (e) => {
+    touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+buttons.vizPanel.addEventListener('touchend', (e) => {
+    if (window.innerWidth > 768) return;
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaY = touchStartY - touchEndY;
+
+    if (Math.abs(deltaY) > 50) {
+        if (deltaY > 0) {
+            buttons.app.classList.add('viz-expanded');
+            buttons.app.classList.remove('viz-peek');
+            buttons.app.classList.remove('viz-hidden');
+        } else {
+            if (buttons.app.classList.contains('viz-expanded')) {
+                buttons.app.classList.remove('viz-expanded');
+                buttons.app.classList.add('viz-peek');
+            }
+        }
+    }
+}, { passive: true });
 
 function setActiveButton(activeId) {
     Object.entries(buttons).forEach(([id, btn]) => {
@@ -98,19 +156,26 @@ function setActiveButton(activeId) {
     document.body.classList.add(`mode-${activeId}`);
 }
 
-buttons.select.addEventListener('click', () => {
-    graph.setMode('select');
-    setActiveButton('select');
-});
 buttons.addNode.addEventListener('click', () => {
-    graph.setMode('addNode');
-    setActiveButton('addNode');
-    buttons.nodeNameInput.value = '';
-    graph.nextNodeName = '';
+    if (currentMode === 'addNode') {
+        currentMode = 'select';
+    } else {
+        currentMode = 'addNode';
+        buttons.nodeNameInput.value = '';
+        graph.nextNodeName = '';
+    }
+    graph.setMode(currentMode);
+    setActiveButton(currentMode === 'select' ? null : currentMode);
 });
+
 buttons.addEdge.addEventListener('click', () => {
-    graph.setMode('addEdge');
-    setActiveButton('addEdge');
+    if (currentMode === 'addEdge') {
+        currentMode = 'select';
+    } else {
+        currentMode = 'addEdge';
+    }
+    graph.setMode(currentMode);
+    setActiveButton(currentMode === 'select' ? null : currentMode);
 });
 buttons.delete.addEventListener('click', () => {
     graph.deleteSelected();
@@ -571,6 +636,15 @@ buttons.runAlgo.addEventListener('click', async () => {
     if (algo !== 'custom' && (!graph.selectedElement || graph.selectedElement.type !== 'node')) return;
     if (algo === 'custom' && customSequence.length === 0) return;
 
+    buttons.app.classList.add('side-hidden');
+    if (window.innerWidth <= 768) {
+        buttons.app.classList.remove('viz-hidden');
+        buttons.app.classList.add('viz-peek');
+        buttons.app.classList.remove('viz-expanded');
+    } else {
+        buttons.app.classList.remove('viz-hidden');
+    }
+
     isAlgoRunning = true;
     buttons.runAlgo.style.display = 'none';
     buttons.stopAlgo.style.display = 'block';
@@ -692,7 +766,11 @@ graph.onSelectionChange = (selection) => {
 
 window.addEventListener('keydown', (e) => {
     if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
-    if (e.key === 's' || e.key === 'S') buttons.select.click();
+    if (e.key === 's' || e.key === 'S') {
+        currentMode = 'select';
+        graph.setMode('select');
+        setActiveButton(null);
+    }
     if (e.key === 'n' || e.key === 'N') buttons.addNode.click();
     if (e.key === 'e' || e.key === 'E') buttons.addEdge.click();
     if (e.key === 'Delete' || e.key === 'Backspace') graph.deleteSelected();
@@ -708,7 +786,7 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-setActiveButton('select');
+setActiveButton(null);
 
 const defaultData = {
     "nodes": [
